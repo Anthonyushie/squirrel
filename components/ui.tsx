@@ -1,6 +1,15 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+
+/**
+ * Renders overlays on <body>, so a parent's stacking context (like the sticky player) can't
+ * put them underneath the tab bar.
+ */
+export function Overlay({ children }: { children: ReactNode }) {
+	return createPortal(children, document.body);
+}
 
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
 	useEffect(() => {
@@ -14,23 +23,25 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
 	}, [onClose]);
 
 	return (
-		<div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50" onClick={onClose}>
-			<div
-				role="dialog"
-				aria-modal="true"
-				aria-label={title}
-				className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-line bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
-				onClick={(e) => e.stopPropagation()}
-			>
-				<div className="mb-4 flex items-center justify-between">
-					<h2 className="text-lg font-bold">{title}</h2>
-					<button className="btn -mr-2 min-h-11 px-3 text-muted" onClick={onClose} aria-label="Close">
-						✕
-					</button>
+		<Overlay>
+			<div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50" onClick={onClose}>
+				<div
+					role="dialog"
+					aria-modal="true"
+					aria-label={title}
+					className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-line bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+					onClick={(e) => e.stopPropagation()}
+				>
+					<div className="mb-4 flex items-center justify-between">
+						<h2 className="text-lg font-bold">{title}</h2>
+						<button className="btn -mr-2 min-h-11 px-3 text-muted" onClick={onClose} aria-label="Close">
+							✕
+						</button>
+					</div>
+					{children}
 				</div>
-				{children}
 			</div>
-		</div>
+		</Overlay>
 	);
 }
 

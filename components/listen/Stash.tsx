@@ -11,7 +11,7 @@ import { isTestMint, loadSettings, mintHost, type Settings } from '@/lib/setting
 import { NUT_SIZES, createFundingQuote, fillJar, getBalance, jarCounts, waitForPaymentAndMint, type NutSize } from '@/lib/wallet';
 
 /** Wallet balance and jars of nuts, with the Add sats and Fill jar flows. */
-export function Stash({ onChange }: { onChange?: () => void }) {
+export function Stash({ refreshKey = 0, onChange }: { refreshKey?: number; onChange?: () => void }) {
 	const online = useOnline();
 	const [settings, setSettings] = useState<Settings>();
 	const [balance, setBalance] = useState(0);
@@ -37,9 +37,12 @@ export function Stash({ onChange }: { onChange?: () => void }) {
 			setSettings(d.s);
 			setBalance(d.balance);
 			setJars(d.jars);
-			// Keep mint keys fresh while online, so offline checks have them later.
-			refreshKnownMints([d.s.mintUrl]);
 		})();
+	}, [refreshKey]);
+
+	// Keep mint keys fresh while online (once per page load), so offline checks have them later.
+	useEffect(() => {
+		loadSettings().then((s) => refreshKnownMints([s.mintUrl]));
 	}, []);
 
 	if (!settings) return null;

@@ -61,7 +61,9 @@ export function ServiceWorker() {
 	useEffect(() => {
 		// Service workers stay off in dev; offline behavior is tested on a production build.
 		if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return;
-		navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).catch((e) => console.error('SW registration failed', e));
+		navigator.serviceWorker
+			.register(`/sw.js?v=${process.env.NEXT_PUBLIC_BUILD_ID}`, { scope: '/', updateViaCache: 'none' })
+			.catch((e) => console.error('SW registration failed', e));
 	}, []);
 	return null;
 }

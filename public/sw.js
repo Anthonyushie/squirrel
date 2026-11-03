@@ -1,6 +1,8 @@
 // Squirrel service worker: caches the app shell only (pages, JS, CSS, icons).
 // API responses and audio are never cached here; audio lives in IndexedDB.
-const CACHE = 'squirrel-shell-v1';
+// Registered as /sw.js?v=<build id>, so every deploy installs a fresh copy and re-caches all tabs.
+const VERSION = new URL(self.location.href).searchParams.get('v') ?? 'dev';
+const CACHE = `squirrel-shell-${VERSION}`;
 const PAGES = ['/listen', '/creator', '/settings'];
 const EXTRA = ['/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png'];
 
@@ -36,10 +38,19 @@ self.addEventListener('activate', (event) => {
 	event.waitUntil(
 		caches
 			.keys()
-			.then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+			.then((keys) => Promise.all(keys.filter((k) => k.startsWith('squirrel-shell-') && k !== CACHE).map((k) => caches.delete(k))))
 			.then(() => self.clients.claim()),
 	);
 });
+
+// Clone before handing the response to the page; the page consumes the original body.
+function store(key, res) {
+	if (res.ok) {
+		const copy = res.clone();
+		caches.open(CACHE).then((c) => c.put(key, copy));
+	}
+	return res;
+}
 
 self.addEventListener('fetch', (event) => {
 	const req = event.request;
@@ -48,16 +59,7 @@ self.addEventListener('fetch', (event) => {
 
 	// Hashed build assets never change: cache first.
 	if (url.pathname.startsWith('/_next/static/') || EXTRA.includes(url.pathname)) {
-		event.respondWith(
-			caches.match(req).then(
-				(hit) =>
-					hit ??
-					fetch(req).then((res) => {
-						if (res.ok) caches.open(CACHE).then((c) => c.put(req, res.clone()));
-						return res;
-					}),
-			),
-		);
+		event.respondWith(caches.match(req).then((hit) => hit ?? fetch(req).then((res) => store(req, res))));
 		return;
 	}
 
@@ -65,10 +67,7 @@ self.addEventListener('fetch', (event) => {
 	if (req.mode === 'navigate') {
 		event.respondWith(
 			fetch(req)
-				.then((res) => {
-					if (res.ok && PAGES.includes(url.pathname)) caches.open(CACHE).then((c) => c.put(url.pathname, res.clone()));
-					return res;
-				})
+				.then((res) => (PAGES.includes(url.pathname) ? store(url.pathname, res) : res))
 				.catch(async () => (await caches.match(url.pathname)) ?? (await caches.match('/listen')) ?? Response.error()),
 		);
 		return;

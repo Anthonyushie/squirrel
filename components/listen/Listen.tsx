@@ -5,6 +5,8 @@ import { getSetting, savedEpisodeGuids, setSetting, type EpisodeRecord } from '@
 import { deleteSavedEpisode, downloadEpisode, getSavedEpisode } from '@/lib/episodes';
 import { formatBytes, formatTime, type Episode, type Show } from '@/lib/feed';
 import { useOnline } from '@/lib/hooks';
+import { GiftSheet } from './GiftSheet';
+import { Gifts } from './Gifts';
 import { Stash } from './Stash';
 
 type FeedState = { show?: Show & { fetchedAt?: number }; error?: string; loading: boolean };
@@ -15,6 +17,9 @@ export function Listen() {
 	const [saved, setSaved] = useState<Set<string>>(new Set());
 	const [progress, setProgress] = useState<Record<string, number>>({});
 	const [playing, setPlaying] = useState<EpisodeRecord>();
+	// Bumped after a gift so the jar counts and gift list re-read IndexedDB.
+	const [stashVersion, setStashVersion] = useState(0);
+	const bump = () => setStashVersion((v) => v + 1);
 
 	// Last feed from IndexedDB first (works offline), then refresh from the network.
 	useEffect(() => {
@@ -68,7 +73,7 @@ export function Listen() {
 
 	return (
 		<div className="space-y-6">
-			<Stash />
+			<Stash refreshKey={stashVersion} />
 
 			{show && (
 				<div className="flex items-center gap-3">
@@ -82,7 +87,9 @@ export function Listen() {
 				</div>
 			)}
 
-			{playing && <Player episode={playing} />}
+			{playing && <Player episode={playing} onGift={bump} />}
+
+			<Gifts refreshKey={stashVersion} onChange={bump} />
 
 			{feed.loading && !show && <p className="text-muted">Loading episodes…</p>}
 			{!feed.loading && !show && (
@@ -168,18 +175,28 @@ function EpisodeRow(props: {
 	);
 }
 
-function Player({ episode }: { episode: EpisodeRecord }) {
+function Player({ episode, onGift }: { episode: EpisodeRecord; onGift: () => void }) {
 	const audio = useRef<HTMLAudioElement>(null);
+	const [gifting, setGifting] = useState<number>();
 
 	// Play from the stored Blob, never from the network.
 	const src = useMemo(() => URL.createObjectURL(episode.audio), [episode]);
 	useEffect(() => () => URL.revokeObjectURL(src), [src]);
 
+	function gift() {
+		audio.current?.pause();
+		setGifting(audio.current?.currentTime ?? 0);
+	}
+
 	return (
 		<div className="card sticky top-16 z-10 space-y-3 shadow-lg">
 			<p className="text-xs font-semibold tracking-wide text-accent uppercase">Now playing · from device</p>
 			<p className="leading-snug font-semibold">{episode.title}</p>
-			{src && <audio ref={audio} src={src} controls autoPlay className="w-full" />}
+			<audio ref={audio} src={src} controls autoPlay className="w-full" />
+			<button className="btn-primary w-full text-lg" onClick={gift}>
+				Gift
+			</button>
+			{gifting !== undefined && <GiftSheet episode={episode} seconds={gifting} onClose={() => setGifting(undefined)} onChange={onGift} />}
 		</div>
 	);
 }
