@@ -59,6 +59,8 @@ export type InboxGift = {
 	locktime: number;
 	redeemed: boolean;
 	redeemError?: string;
+	/** The creator's own unlocked proofs after redeeming, so they can move them to any wallet. */
+	redeemedProofs?: ProofJson[];
 	receivedAt: number;
 };
 

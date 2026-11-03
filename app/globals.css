@@ -69,3 +69,19 @@ body {
 @utility label {
   @apply mb-1 block text-sm font-medium text-muted;
 }
+
+/* Creator "Verified" moment: the badge pops in, then the check draws itself. */
+@keyframes verify-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes verify-draw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+.verify-pop { animation: verify-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.verify-draw { stroke-dasharray: 24; animation: verify-draw 360ms 260ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .verify-pop, .verify-draw { animation: none; }
+}
