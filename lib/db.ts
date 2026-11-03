@@ -100,6 +100,8 @@ export type SettingsMap = {
 	nostrKeys: { priv: string; pub: string };
 	creatorKeys: { priv: string; pub: string };
 	feed: Show & { fetchedAt: number };
+	/** Invoices created but not yet minted, so a paid one is never lost if the app closes. */
+	pendingQuotes: { mintUrl: string; quote: string; amount: number; createdAt: number }[];
 };
 
 interface SquirrelDB extends DBSchema {

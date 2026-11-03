@@ -9,7 +9,7 @@ import { useOnline } from '@/lib/hooks';
 import { refreshKnownMints } from '@/lib/mint';
 import { listExpired, reclaimExpired, type Expired } from '@/lib/refund';
 import { isTestMint, loadSettings, mintHost, type Settings } from '@/lib/settings';
-import { NUT_SIZES, createFundingQuote, fillJar, getBalance, jarCounts, waitForPaymentAndMint, type NutSize } from '@/lib/wallet';
+import { NUT_SIZES, createFundingQuote, fillJar, getBalance, jarCounts, resumePendingQuotes, waitForPaymentAndMint, type NutSize } from '@/lib/wallet';
 
 /** Wallet balance and jars of nuts, with the Add sats and Fill jar flows. */
 export function Stash({ refreshKey = 0, onChange }: { refreshKey?: number; onChange?: () => void }) {
@@ -60,9 +60,16 @@ export function Stash({ refreshKey = 0, onChange }: { refreshKey?: number; onCha
 		reload();
 	}
 
-	// Keep mint keys fresh while online (once per page load), so offline checks have them later.
+	// Once per page load while online: refresh mint keys for offline checks, and mint any
+	// invoice that got paid after the Add sats sheet was closed.
 	useEffect(() => {
-		loadSettings().then((s) => refreshKnownMints([s.mintUrl]));
+		(async () => {
+			await refreshKnownMints([(await loadSettings()).mintUrl]);
+			if (await resumePendingQuotes()) {
+				const d = await load();
+				setBalance(d.balance);
+			}
+		})();
 	}, []);
 
 	if (!settings) return null;

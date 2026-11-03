@@ -1,5 +1,5 @@
 import { MintQuoteState, deserializeProofs, serializeProofs, type MintQuoteBolt11Response, type Proof } from '@cashu/cashu-ts';
-import { db, get, newId, put, type Jar } from './db';
+import { db, get, getSetting, newId, put, setSetting, type Jar } from './db';
 import { ensureListenerKeys } from './keys';
 import { getWallet } from './mint';
 
@@ -22,7 +22,41 @@ export const getBalance = async (mintUrl: string) => sumProofs(await getProofs(m
 
 export async function createFundingQuote(mintUrl: string, amount: number) {
 	const wallet = await getWallet(mintUrl);
-	return wallet.createMintQuoteBolt11(amount);
+	const quote = await wallet.createMintQuoteBolt11(amount);
+	const pending = (await getSetting('pendingQuotes')) ?? [];
+	await setSetting('pendingQuotes', [...pending, { mintUrl, quote: quote.quote, amount, createdAt: Date.now() }]);
+	return quote;
+}
+
+async function forgetQuote(quoteId: string) {
+	const pending = (await getSetting('pendingQuotes')) ?? [];
+	await setSetting('pendingQuotes', pending.filter((q) => q.quote !== quoteId));
+}
+
+/**
+ * Mints any invoice that was paid after the Add sats sheet closed (or the app was killed).
+ * Unpaid invoices are dropped after a day. Returns the sats recovered.
+ */
+export async function resumePendingQuotes(): Promise<number> {
+	if (!navigator.onLine) return 0;
+	let recovered = 0;
+	for (const p of (await getSetting('pendingQuotes')) ?? []) {
+		try {
+			const wallet = await getWallet(p.mintUrl);
+			const { state } = await wallet.checkMintQuoteBolt11(p.quote);
+			if (state === MintQuoteState.PAID) {
+				const minted = await wallet.mintProofsBolt11(p.amount, p.quote);
+				await saveProofs(p.mintUrl, [...(await getProofs(p.mintUrl)), ...minted]);
+				recovered += sumProofs(minted);
+				await forgetQuote(p.quote);
+			} else if (state === MintQuoteState.ISSUED || Date.now() - p.createdAt > 86400_000) {
+				await forgetQuote(p.quote);
+			}
+		} catch {
+			// mint unreachable: try again next time
+		}
+	}
+	return recovered;
 }
 
 /** Polls until the invoice is paid, then mints the proofs into the wallet. */
@@ -37,6 +71,7 @@ export async function waitForPaymentAndMint(mintUrl: string, quote: MintQuoteBol
 	}
 	const minted = await wallet.mintProofsBolt11(amount, quote.quote);
 	await saveProofs(mintUrl, [...(await getProofs(mintUrl)), ...minted]);
+	await forgetQuote(quote.quote);
 	return sumProofs(minted);
 }
 
