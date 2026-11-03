@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { CHANGED } from '@/components/Sync';
 import { list, type Gift, type Jar } from '@/lib/db';
 import { formatTime } from '@/lib/feed';
 import { STATUS_LABEL, listGifts, setGiftStatus } from '@/lib/gift';
+import { eventLink } from '@/lib/nutzap';
 import { GiftQr } from './GiftSheet';
 
 const STATUS_STYLE: Record<Gift['status'], string> = {
@@ -19,13 +21,21 @@ export function Gifts({ refreshKey, onChange }: { refreshKey: number; onChange: 
 	const [gifts, setGifts] = useState<Gift[]>([]);
 	const [jars, setJars] = useState<Map<string, Jar>>(new Map());
 	const [showing, setShowing] = useState<Gift>();
+	const [synced, setSynced] = useState(0);
 
 	useEffect(() => {
 		(async () => {
 			setGifts(await listGifts());
 			setJars(new Map((await list('jars')).map((j) => [j.id, j])));
 		})();
-	}, [refreshKey]);
+	}, [refreshKey, synced]);
+
+	// Re-read after the background nutzap sync changes a gift's status.
+	useEffect(() => {
+		const onChange = () => setSynced((n) => n + 1);
+		window.addEventListener(CHANGED, onChange);
+		return () => window.removeEventListener(CHANGED, onChange);
+	}, []);
 
 	if (!gifts.length) return null;
 
@@ -45,7 +55,14 @@ export function Gifts({ refreshKey, onChange }: { refreshKey: number; onChange: 
 						<p className="truncate text-xs text-muted">
 							{formatTime(g.seconds)} · {g.episodeTitle}
 						</p>
-						{(g.status === 'created' || g.status === 'handed_over') && (
+						{g.status === 'queued' && g.sendError && <p className="text-xs text-bad">{g.sendError}</p>}
+						{g.reclaimed && <p className="text-xs text-muted">Not redeemed in time: taken back into your wallet.</p>}
+						{g.eventId && (
+							<a className="text-xs font-semibold text-accent underline" href={eventLink(g.eventId)} target="_blank" rel="noreferrer">
+								View nutzap on Nostr
+							</a>
+						)}
+						{(g.status === 'created' || g.status === 'handed_over') && !g.reclaimed && (
 							<button className="btn-ghost min-h-10 w-full text-sm" onClick={() => setShowing(g)}>
 								Show QR again
 							</button>

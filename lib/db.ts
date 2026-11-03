@@ -15,7 +15,8 @@ export type JarNut = {
 	proof: ProofJson;
 	amount: number;
 	spent: boolean;
-	reclaimed?: boolean;
+	/** True once the nut is reclaimed or known to be redeemed: no longer counts as expired. */
+	settled?: boolean;
 };
 
 export type Jar = {
@@ -44,6 +45,10 @@ export type Gift = {
 	delivery?: 'qr' | 'queue';
 	status: GiftStatus;
 	eventId?: string;
+	/** Why a queued gift couldn't be sent as a nutzap (it stays queued). */
+	sendError?: string;
+	/** Set when the giver took the nut back after the locktime. */
+	reclaimed?: boolean;
 	createdAt: number;
 };
 

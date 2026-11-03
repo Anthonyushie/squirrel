@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Header, ServiceWorker, TabBar } from '@/components/Chrome';
+import { Sync } from '@/components/Sync';
 import './globals.css';
 
 const geistSans = Geist({
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
 				<main className="mx-auto w-full max-w-lg flex-1 px-4 pt-4 pb-28">{children}</main>
 				<TabBar />
 				<ServiceWorker />
+				<Sync />
 			</body>
 		</html>
 	);

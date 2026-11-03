@@ -7,6 +7,7 @@ import { CopyText, Notice, Sheet } from '@/components/ui';
 import { list, type Jar } from '@/lib/db';
 import { useOnline } from '@/lib/hooks';
 import { refreshKnownMints } from '@/lib/mint';
+import { listExpired, reclaimExpired, type Expired } from '@/lib/refund';
 import { isTestMint, loadSettings, mintHost, type Settings } from '@/lib/settings';
 import { NUT_SIZES, createFundingQuote, fillJar, getBalance, jarCounts, waitForPaymentAndMint, type NutSize } from '@/lib/wallet';
 
@@ -16,11 +17,13 @@ export function Stash({ refreshKey = 0, onChange }: { refreshKey?: number; onCha
 	const [settings, setSettings] = useState<Settings>();
 	const [balance, setBalance] = useState(0);
 	const [jars, setJars] = useState<Jar[]>([]);
+	const [expired, setExpired] = useState<Expired[]>([]);
 	const [sheet, setSheet] = useState<'fund' | 'fill'>();
+	const [reclaiming, setReclaiming] = useState('');
 
 	async function load() {
 		const s = await loadSettings();
-		return { s, balance: await getBalance(s.mintUrl), jars: await list('jars') };
+		return { s, balance: await getBalance(s.mintUrl), jars: await list('jars'), expired: await listExpired() };
 	}
 
 	async function reload() {
@@ -28,6 +31,7 @@ export function Stash({ refreshKey = 0, onChange }: { refreshKey?: number; onCha
 		setSettings(d.s);
 		setBalance(d.balance);
 		setJars(d.jars);
+		setExpired(d.expired);
 		onChange?.();
 	}
 
@@ -37,8 +41,24 @@ export function Stash({ refreshKey = 0, onChange }: { refreshKey?: number; onCha
 			setSettings(d.s);
 			setBalance(d.balance);
 			setJars(d.jars);
+			setExpired(d.expired);
 		})();
 	}, [refreshKey]);
+
+	async function reclaim() {
+		setReclaiming('Checking with the mint…');
+		try {
+			const r = await reclaimExpired(expired);
+			setReclaiming(
+				[r.reclaimed && `Took back ${r.reclaimed} sats.`, r.redeemedByCreator && `${r.redeemedByCreator} gifted nut${r.redeemedByCreator > 1 ? 's were' : ' was'} already redeemed by the creator.`]
+					.filter(Boolean)
+					.join(' ') || 'Nothing to take back.',
+			);
+		} catch (e) {
+			setReclaiming(`Couldn't reclaim: ${(e as Error).message}`);
+		}
+		reload();
+	}
 
 	// Keep mint keys fresh while online (once per page load), so offline checks have them later.
 	useEffect(() => {
@@ -92,6 +112,18 @@ export function Stash({ refreshKey = 0, onChange }: { refreshKey?: number; onCha
 			</div>
 			{!online && <p className="text-center text-xs text-muted">Adding sats and filling jars needs a connection. Gifting doesn&apos;t.</p>}
 
+			{expired.length > 0 && (
+				<div className="space-y-2 rounded-xl border border-accent/40 bg-accent/10 p-3">
+					<p className="text-sm">
+						<span className="font-semibold">{expired.reduce((a, e) => a + e.amount, 0)} sats</span> in {expired.length} nut{expired.length > 1 ? 's' : ''} passed the locktime without being redeemed. Your refund key can take them back.
+					</p>
+					<button className="btn-ghost min-h-10 w-full text-sm" onClick={reclaim} disabled={!online || reclaiming.endsWith('…')}>
+						{reclaiming.endsWith('…') ? reclaiming : 'Reclaim'}
+					</button>
+				</div>
+			)}
+			{reclaiming && !reclaiming.endsWith('…') && <Notice tone="info">{reclaiming}</Notice>}
+
 			{sheet === 'fund' && <FundSheet settings={settings} onClose={() => setSheet(undefined)} onDone={reload} />}
 			{sheet === 'fill' && <FillSheet settings={settings} balance={balance} onClose={() => setSheet(undefined)} onDone={reload} />}
 		</section>
@@ -100,7 +132,9 @@ export function Stash({ refreshKey = 0, onChange }: { refreshKey?: number; onCha
 
 function groupJars(jars: Jar[]) {
 	const map = new Map<string, { key: string; name: string; mintUrl: string; jars: Jar[] }>();
-	for (const j of jars) {
+	const now = Date.now() / 1000;
+	// Expired jars can't be gifted from any more; their nuts show up under Reclaim instead.
+	for (const j of jars.filter((j) => j.locktime > now)) {
 		const key = `${j.lockKey}|${j.mintUrl}`;
 		if (!map.has(key)) map.set(key, { key, name: j.creatorName, mintUrl: j.mintUrl, jars: [] });
 		map.get(key)!.jars.push(j);
@@ -118,8 +152,10 @@ function groupJars(jars: Jar[]) {
 
 function daysLeft(locktime: number) {
 	if (!Number.isFinite(locktime)) return 'all gifted';
-	const days = Math.ceil((locktime - Date.now() / 1000) / 86400 - 0.01);
-	return days >= 1 ? `${days} days to redeem` : 'expires today';
+	const secs = locktime - Date.now() / 1000;
+	if (secs >= 86400) return `${Math.ceil(secs / 86400 - 0.01)} days to redeem`;
+	if (secs >= 3600) return `${Math.floor(secs / 3600)} hours to redeem`;
+	return `${Math.max(1, Math.ceil(secs / 60))} min to redeem`;
 }
 
 function FundSheet({ settings, onClose, onDone }: { settings: Settings; onClose: () => void; onDone: () => void }) {
@@ -194,6 +230,8 @@ function FundSheet({ settings, onClose, onDone }: { settings: Settings; onClose:
 
 function FillSheet({ settings, balance, onClose, onDone }: { settings: Settings; balance: number; onClose: () => void; onDone: () => void }) {
 	const [counts, setCounts] = useState<Record<NutSize, number>>({ 8: 3, 32: 2, 64: 1 });
+	// Test-mint only: a 2-minute locktime so the refund path can be tried without waiting 30 days.
+	const [quickExpiry, setQuickExpiry] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState('');
 	const total = NUT_SIZES.reduce((a, size) => a + size * counts[size], 0);
@@ -204,7 +242,11 @@ function FillSheet({ settings, balance, onClose, onDone }: { settings: Settings;
 		setBusy(true);
 		setError('');
 		try {
-			await fillJar({ creatorNpub: settings.creatorNpub, creatorName: settings.creatorName, lockKey: settings.creatorLockKey, mintUrl: settings.mintUrl }, counts);
+			await fillJar(
+				{ creatorNpub: settings.creatorNpub, creatorName: settings.creatorName, lockKey: settings.creatorLockKey, mintUrl: settings.mintUrl },
+				counts,
+				quickExpiry ? 120 : undefined,
+			);
 			onDone();
 			onClose();
 		} catch (e) {
@@ -251,6 +293,12 @@ function FillSheet({ settings, balance, onClose, onDone }: { settings: Settings;
 							</span>
 						</p>
 						{untrusted && <Notice tone="warn">{mintHost(settings.mintUrl)} isn&apos;t one of {settings.creatorName}&apos;s trusted mints.</Notice>}
+						{isTestMint(settings.mintUrl) && (
+							<label className="flex items-center gap-2 text-sm text-muted">
+								<input type="checkbox" className="size-5 accent-[var(--accent)]" checked={quickExpiry} onChange={(e) => setQuickExpiry(e.target.checked)} />
+								Test refunds: lock for 2 minutes instead of 30 days
+							</label>
+						)}
 						{error && <Notice tone="bad">{error}</Notice>}
 						<button className="btn-primary w-full" onClick={fill} disabled={busy || !total || total > balance}>
 							{busy ? 'Locking nuts…' : `Fill jar with ${total} sats`}
