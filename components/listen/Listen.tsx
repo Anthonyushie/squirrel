@@ -7,6 +7,7 @@ import { formatBytes, formatTime, type Episode, type Show } from '@/lib/feed';
 import { useOnline } from '@/lib/hooks';
 import { GiftSheet } from './GiftSheet';
 import { Gifts } from './Gifts';
+import { Onboarding } from './Onboarding';
 import { Stash } from './Stash';
 
 type FeedState = { show?: Show & { fetchedAt?: number }; error?: string; loading: boolean };
@@ -73,7 +74,8 @@ export function Listen() {
 
 	return (
 		<div className="space-y-6">
-			<Stash refreshKey={stashVersion} />
+			<Onboarding refreshKey={stashVersion + saved.size} />
+			<Stash refreshKey={stashVersion} onChange={bump} />
 
 			{show && (
 				<div className="flex items-center gap-3">
