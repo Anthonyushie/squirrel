@@ -26,7 +26,7 @@ npx tsx 06-nutzap-dryrun.ts      # real sats on Minibits; prints an invoice for 
 
 ## Decisions and gotchas for Stage 1+
 
-- **Use cashu-ts 4.x** (pinned 4.13.0). A bare `npm install` resolved 2.5.3 here, which can't load
+- **Use cashu-ts 4.x** (pinned 4.12.0, the newest release over two weeks old). A bare `npm install` resolved 2.5.3 here, which can't load
   v2 keyset IDs (`01…`, 66 hex chars) that current cdk mints use: "No active keyset found".
 - **API names in 4.x:** `new Wallet(url)`, `createMintQuoteBolt11` / `checkMintQuoteBolt11` /
   `mintProofsBolt11`, `wallet.ops.send(n, proofs).asP2PK({ pubkey, locktime, refundKeys }, [32, 32]).run()`,

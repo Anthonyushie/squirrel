@@ -5,6 +5,7 @@ import { getSetting, savedEpisodeGuids, setSetting, type EpisodeRecord } from '@
 import { deleteSavedEpisode, downloadEpisode, getSavedEpisode } from '@/lib/episodes';
 import { formatBytes, formatTime, type Episode, type Show } from '@/lib/feed';
 import { useOnline } from '@/lib/hooks';
+import { Stash } from './Stash';
 
 type FeedState = { show?: Show & { fetchedAt?: number }; error?: string; loading: boolean };
 
@@ -67,6 +68,8 @@ export function Listen() {
 
 	return (
 		<div className="space-y-6">
+			<Stash />
+
 			{show && (
 				<div className="flex items-center gap-3">
 					{show.image && <img src={show.image} alt="" className="size-16 rounded-xl bg-line object-cover" />}
