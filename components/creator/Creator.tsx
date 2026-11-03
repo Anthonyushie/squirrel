@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { CopyText, Notice, Overlay, Sheet } from '@/components/ui';
 import { cacheAcceptedMints, listInbox, redeemAll, redeemedTokens } from '@/lib/creator';
 import { getSetting, list, put, type InboxGift, type MintKeysRecord } from '@/lib/db';
-import { formatTime } from '@/lib/feed';
+import { refreshFeed } from '@/lib/episodes';
+import { chapterAt, formatTime, type Episode } from '@/lib/feed';
 import { episodeRef } from '@/lib/gift';
 import { useOnline } from '@/lib/hooks';
 import { getCreatorKeys, keypairFromPriv, newP2PKKeypair, setCreatorKeys } from '@/lib/keys';
 import { mintHost } from '@/lib/settings';
 import { verifyGift, type Verification } from '@/lib/verify';
+import { Moments } from './Moments';
 import { Scanner } from './Scanner';
 
 export function Creator() {
@@ -17,7 +19,7 @@ export function Creator() {
 	const [keys, setKeys] = useState<{ priv: string; pub: string } | null>();
 	const [inbox, setInbox] = useState<InboxGift[]>([]);
 	const [mints, setMints] = useState<MintKeysRecord[]>([]);
-	const [titles, setTitles] = useState<Map<string, string>>(new Map());
+	const [episodes, setEpisodes] = useState<Map<string, Episode>>(new Map());
 	const [scanning, setScanning] = useState(false);
 	const [pasting, setPasting] = useState(false);
 	const [result, setResult] = useState<Verification>();
@@ -29,15 +31,16 @@ export function Creator() {
 			setKeys((await getCreatorKeys()) ?? null);
 			setInbox(await listInbox());
 			setMints(await list('mintKeys'));
-			// Map memo episode refs back to titles using this phone's copy of the feed, if any.
+			// Map memo episode refs back to episodes using this phone's copy of the feed, if any.
 			const feed = await getSetting('feed');
-			setTitles(new Map((feed?.episodes ?? []).map((e) => [episodeRef(e.guid), e.title])));
+			setEpisodes(new Map((feed?.episodes ?? []).map((e) => [episodeRef(e.guid), e])));
 		})();
 	}, [version]);
 
-	// Cache accepted mints' keys while online, so gifts verify in airplane mode later.
+	// While online, cache accepted mints' keys and the feed, so gifts verify and the moments map
+	// can name episodes and chapters in airplane mode later.
 	useEffect(() => {
-		cacheAcceptedMints().then(() => setVersion((v) => v + 1));
+		Promise.allSettled([cacheAcceptedMints(), navigator.onLine && refreshFeed()]).then(() => setVersion((v) => v + 1));
 	}, []);
 
 	const onScan = useCallback(
@@ -86,6 +89,8 @@ export function Creator() {
 				Paste a gift instead
 			</button>
 
+			<Moments inbox={inbox} episodes={episodes} online={online} />
+
 			<section className="space-y-3">
 				<div className="flex items-end justify-between">
 					<h2 className="text-lg font-bold">Inbox</h2>
@@ -106,7 +111,7 @@ export function Creator() {
 								{g.message && <p className="text-sm">&ldquo;{g.message}&rdquo;</p>}
 								<p className="truncate text-xs text-muted">
 									{g.seconds !== undefined && `at ${formatTime(g.seconds)}`}
-									{g.episodeRef && titles.get(g.episodeRef) ? ` · ${titles.get(g.episodeRef)}` : ''} · {mintHost(g.mintUrl)}
+									{g.episodeRef && episodes.get(g.episodeRef) ? ` · ${episodes.get(g.episodeRef)!.title}` : ''} · {mintHost(g.mintUrl)}
 								</p>
 								{g.redeemError && <p className="text-xs text-bad">{g.redeemError}</p>}
 							</li>
@@ -152,7 +157,7 @@ export function Creator() {
 
 			{scanning && <Scanner onResult={onScan} onClose={() => setScanning(false)} />}
 			{pasting && <PasteSheet onSubmit={onScan} onClose={() => setPasting(false)} />}
-			{result && <ResultScreen v={result} title={result.episodeRef ? titles.get(result.episodeRef) : undefined} onClose={() => setResult(undefined)} />}
+			{result && <ResultScreen v={result} episode={result.episodeRef ? episodes.get(result.episodeRef) : undefined} onClose={() => setResult(undefined)} />}
 		</div>
 	);
 }
@@ -223,8 +228,9 @@ function PasteSheet({ onSubmit, onClose }: { onSubmit: (text: string) => void; o
 	);
 }
 
-function ResultScreen({ v, title, onClose }: { v: Verification; title?: string; onClose: () => void }) {
+function ResultScreen({ v, episode, onClose }: { v: Verification; episode?: Episode; onClose: () => void }) {
 	const failed = v.checks.filter((c) => !c.ok);
+	const chapter = v.seconds !== undefined ? chapterAt(episode?.chapters, v.seconds) : undefined;
 	const duplicate = failed.length === 1 && failed[0].id === 'duplicate';
 	return (
 		<Overlay>
@@ -255,7 +261,13 @@ function ResultScreen({ v, title, onClose }: { v: Verification; title?: string; 
 					{v.seconds !== undefined && (
 						<p className="text-sm text-white/80">
 							at {formatTime(v.seconds)}
-							{title ? ` in ${title}` : ''}
+							{episode ? ` in ${episode.title}` : ''}
+							{chapter && (
+								<>
+									<br />
+									{chapter.title}
+								</>
+							)}
 						</p>
 					)}
 				</div>

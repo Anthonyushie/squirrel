@@ -1,3 +1,6 @@
+/** One entry from a Podcasting 2.0 JSON chapters file (podcast:chapters). */
+export type Chapter = { start: number; title: string };
+
 export type Episode = {
 	guid: string;
 	title: string;
@@ -7,6 +10,7 @@ export type Episode = {
 	audioBytes: number;
 	image?: string;
 	number?: number;
+	chapters?: Chapter[];
 };
 
 export type Show = {
@@ -23,6 +27,11 @@ export function parseDuration(value: unknown): number {
 	const parts = String(value).split(':').map(Number);
 	if (parts.some(Number.isNaN)) return 0;
 	return parts.reduce((total, part) => total * 60 + part, 0);
+}
+
+/** The chapter playing at `seconds`, if the episode has chapters. */
+export function chapterAt(chapters: Chapter[] | undefined, seconds: number): Chapter | undefined {
+	return chapters?.findLast((c) => c.start <= seconds);
 }
 
 export function formatTime(seconds: number): string {

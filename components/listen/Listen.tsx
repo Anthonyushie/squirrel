@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { getSetting, savedEpisodeGuids, setSetting, type EpisodeRecord } from '@/lib/db';
-import { deleteSavedEpisode, downloadEpisode, getSavedEpisode } from '@/lib/episodes';
+import { getSetting, savedEpisodeGuids, type EpisodeRecord } from '@/lib/db';
+import { deleteSavedEpisode, downloadEpisode, getSavedEpisode, refreshFeed } from '@/lib/episodes';
 import { formatBytes, formatTime, type Episode, type Show } from '@/lib/feed';
 import { useOnline } from '@/lib/hooks';
 import { GiftSheet } from './GiftSheet';
@@ -31,11 +31,7 @@ export function Listen() {
 			if (live && cached) setFeed({ show: cached, loading: navigator.onLine });
 			if (!navigator.onLine) return setFeed((f) => ({ ...f, loading: false }));
 			try {
-				const res = await fetch('/api/feed');
-				const body = await res.json();
-				if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
-				const show = { ...(body as Show), fetchedAt: Date.now() };
-				await setSetting('feed', show);
+				const show = await refreshFeed();
 				if (live) setFeed({ show, loading: false });
 			} catch (e) {
 				if (live) setFeed((f) => ({ ...f, loading: false, error: (e as Error).message }));

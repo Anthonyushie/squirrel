@@ -1,5 +1,15 @@
-import { del, get, put, type EpisodeRecord } from './db';
-import type { Episode } from './feed';
+import { del, get, put, setSetting, type EpisodeRecord } from './db';
+import type { Episode, Show } from './feed';
+
+/** Fetches the show through /api/feed and keeps it in IndexedDB for offline use. */
+export async function refreshFeed() {
+	const res = await fetch('/api/feed');
+	const body = await res.json();
+	if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+	const show = { ...(body as Show), fetchedAt: Date.now() };
+	await setSetting('feed', show);
+	return show;
+}
 
 /** Downloads episode audio into IndexedDB, reporting progress from 0 to 1. */
 export async function downloadEpisode(ep: Episode, onProgress: (fraction: number) => void, signal?: AbortSignal) {
