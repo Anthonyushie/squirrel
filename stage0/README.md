@@ -9,6 +9,7 @@ npx tsx 02-locked-roundtrip.ts   # writes out/state.json (test keys + one unspen
 npx tsx 03-offline-verify.ts     # writes out/keys.json, then verifies with fetch disabled
 npx tsx 04-qr-size.ts            # writes out/gift-*.png
 npx tsx 05-nutzap-info.ts [npub] # defaults to Nodesignal
+npx tsx 06-nutzap-dryrun.ts      # real sats on Minibits; prints an invoice for you to pay
 ```
 
 `out/` holds test private keys and is gitignored.
@@ -44,14 +45,27 @@ npx tsx 05-nutzap-info.ts [npub] # defaults to Nodesignal
 - **noble v2:** import `@noble/curves/secp256k1.js` and `@noble/hashes/utils.js` (with `.js`).
 - **Node 20** needs `ws` for nostr-tools; the browser doesn't.
 
-## Open question: Nodesignal's real key vs. the test mint
+## Decision: real sats on Minibits for Nodesignal nutzaps (2026-11-03)
 
-Nodesignal's kind 10019 lists only mainnet mints. NIP-61 says senders should not nutzap on an
-unlisted mint (the recipient may never claim it). So publishing testnut nutzaps to Nodesignal's
-real npub would break the spec and send them unclaimable fake-sat events. Options:
+Nodesignal's kind 10019 lists only mainnet mints, and NIP-61 says not to nutzap on an unlisted
+mint (the recipient may never claim it). So testnut nutzaps to their real npub are out.
 
-1. **Demo creator for everything on testnut** (the creator phone's own key, its own 10019 if we
-   publish one). Nodesignal's real 10019 is read and shown, but not paid. Matches the PRD's
-   "no mainnet funds".
-2. **Real sats on Minibits** (0 fees, listed by Nodesignal) for the nutzap step only, a few sats,
-   with Nodesignal's OK. Strongest demo for the V4V track, but pulls in mainnet funds.
+- **Nodesignal jar, remote gifts:** `https://mint.minibits.cash/Bitcoin` (exact string from their
+  10019, 0 input fee), locked to their 10019 key, a few real sats, published as kind 9321 only
+  after Nodesignal has agreed. They claim it with their own wallet; Squirrel never holds their key.
+- **Demo creator jar, offline QR demo:** testnut, locked to the creator phone's own key, since the
+  "Verified · locked to you" screen needs the private key on that phone.
+- This changes the PRD in two places: "real mainnet funds" is no longer fully out of scope (small
+  amounts, Nodesignal jar only), and the app holds two jars (two creators), which the data model
+  already allows since each jar records its own mint and lock key.
+- With real sats in browser storage, the refund key matters: losing it means an unclaimed gift
+  can't come back after the locktime. Keep amounts tiny.
+
+`06-nutzap-dryrun.ts` proves this path without publishing: it reads the 10019, checks the mint is
+listed, mints 21 sats (you pay the invoice), locks one 8-sat nut to Nodesignal's key with a refund
+key, signs a kind 9321 and runs the NIP-61 observer checks. Change and recovery data go to `out/`.
+
+| Test | Result |
+| --- | --- |
+| 0.6 Nutzap dry run on testnut (`--allow-unlisted`) | Signature, lock key and DLEQ PASS; "mint listed" FAILs as it should. |
+| 0.6 Nutzap dry run on Minibits | **Not run yet: needs a real 21-sat payment.** |
