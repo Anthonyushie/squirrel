@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "scripts/video/stage.html"
+        ],
+        "createdAt": "2026-11-04T14:25:08.602Z",
+        "reason": "Claude: motion-graphics stage for the launch video (scan beam, flying nut, Verified pulse), not product UI"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "scripts/video/stage.js"
+        ],
+        "createdAt": "2026-11-04T14:28:04.703Z",
+        "reason": "Claude: video renderer sets every img src per frame before screenshotting"
+      }
+    ]
+  }
+}

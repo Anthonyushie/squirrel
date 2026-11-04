@@ -3,9 +3,12 @@
 // offline check and the receipt. Headless Chrome has no camera, so each QR's text is handed across
 // through the app's own Paste box, which runs exactly the checks a scan does. Uses test sats only
 // and never publishes to Nostr.
+// It also screencasts both phones from the jar fill onward into .demo-capture/ (frames plus named
+// moments), which scripts/make-video.mjs cuts into the launch video.
 // Needs: `npm run build && npm start` (BASE, default http://localhost:3000), Chrome (CHROME) and ffmpeg.
 // Run: node scripts/record-demo.mjs
 import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -34,8 +37,11 @@ const ws = new WebSocket(version.webSocketDebuggerUrl, { maxPayload: 512 * 1024 
 await new Promise((r) => ws.once('open', r));
 let nextId = 0;
 const pending = new Map();
+/** Event handlers by session id. */
+const events = new Map();
 ws.on('message', (data) => {
 	const msg = JSON.parse(data.toString());
+	if (msg.method) events.get(msg.sessionId)?.(msg.method, msg.params);
 	if (!msg.id || !pending.has(msg.id)) return;
 	const { resolve, reject } = pending.get(msg.id);
 	pending.delete(msg.id);
@@ -45,7 +51,8 @@ ws.on('message', (data) => {
 const send = (method, params = {}, sessionId) =>
 	new Promise((resolve, reject) => {
 		const id = ++nextId;
-		pending.set(id, { resolve, reject });
+		const timer = setTimeout(() => pending.delete(id) && reject(new Error(`${method} got no answer in 3 minutes`)), 180000);
+		pending.set(id, { resolve: (v) => (clearTimeout(timer), resolve(v)), reject: (e) => (clearTimeout(timer), reject(e)) });
 		ws.send(JSON.stringify({ id, method, params, sessionId }));
 	});
 
@@ -94,14 +101,51 @@ async function phone(width = 375, height = 812) {
 				return true;`);
 			await sleep(150);
 		},
+		/** Like fill, a character at a time, so the screencast sees it typed. */
+		async type(placeholder, value) {
+			await p.fill(placeholder, '');
+			await p.run(`
+				const el = document.querySelector(${JSON.stringify(`[placeholder^="${placeholder}"]`)});
+				const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+				const value = ${JSON.stringify(value)};
+				for (let i = 1; i <= value.length; i++) {
+					Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value.slice(0, i));
+					el.dispatchEvent(new Event('input', { bubbles: true }));
+					await new Promise((r) => setTimeout(r, 45));
+				}
+				return true;`);
+			await sleep(150);
+		},
 		async shot() {
 			const { data } = await cmd('Page.captureScreenshot', { format: 'png' });
 			return Buffer.from(data, 'base64');
 		},
 		offline: (offline) => cmd('Network.emulateNetworkConditions', { offline, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }),
+		/** Screencasts every repaint into CAPTURE/<name>/ until stopped. */
+		async record(name) {
+			const dir = join(CAPTURE, name);
+			mkdirSync(dir, { recursive: true });
+			const frames = (capture.frames[name] = []);
+			events.set(sessionId, (method, params) => {
+				if (method !== 'Page.screencastFrame') return;
+				const file = `${name}/${String(frames.length).padStart(5, '0')}.jpg`;
+				writeFileSync(join(CAPTURE, file), Buffer.from(params.data, 'base64'));
+				frames.push({ t: Math.round(params.metadata.timestamp * 1000), file });
+				cmd('Page.screencastFrameAck', { sessionId: params.sessionId }).catch(() => {});
+			});
+			await cmd('Page.startScreencast', { format: 'jpeg', quality: 88, maxWidth: width * 2, maxHeight: height * 2, everyNthFrame: 1 });
+		},
+		stopRecording: () => cmd('Page.stopScreencast'),
 	};
 	return p;
 }
+
+// --- The video capture: screencast frames per phone and the moments the video cuts on ---
+
+const CAPTURE = '.demo-capture';
+rmSync(CAPTURE, { recursive: true, force: true });
+const capture = { frames: {}, marks: {} };
+const mark = (name) => (capture.marks[name] = Date.now());
 
 function findButton(label) {
 	const l = JSON.stringify(label);
@@ -135,13 +179,23 @@ await listener.run(`await squirrelDb.setSetting('settings', ${JSON.stringify(set
 await listener.goto('/listen');
 await listener.click('Add sats');
 await listener.click('Create invoice');
-await listener.until(`(await squirrelDb.list('wallet')).some((w) => w.proofs.length)`, 'test sats minted', 60000);
+await listener.until(`(await squirrelDb.list('wallet')).some((w) => w.proofs.length)`, 'test sats minted', 150000);
 await listener.click('Done');
+await creator.goto('/creator');
+await Promise.all([listener.record('listener'), creator.record('creator')]);
+await sleep(800);
+mark('fill:open');
 await listener.click('Fill jar');
+await sleep(400);
 for (let i = 0; i < 6; i++) await listener.click('More 8-sat nuts');
 for (let i = 0; i < 2; i++) await listener.click('More 32-sat nuts');
+await sleep(400);
+mark('fill:pour');
 await listener.click('Fill jar with');
 await listener.until(`(await squirrelDb.list('jars')).length > 0`, 'jar filled', 60000);
+mark('fill:filled');
+await sleep(3500);
+mark('fill:done');
 await listener.until(`!!(await squirrelDb.getSetting('feed'))`, 'feed loaded', 60000);
 const episode = await listener.val(`(await squirrelDb.getSetting('feed')).episodes.slice(0, 12).sort((a, b) => a.audioBytes - b.audioBytes)[0].title`);
 await listener.click(`Download ${episode} for offline`);
@@ -153,11 +207,14 @@ await listener.goto('/listen');
 await creator.goto('/creator');
 // Let each page finish its own startup fetches (feed, mint keys) before the network goes.
 await sleep(3000);
+mark('offline:start');
 await listener.offline(true);
 await creator.offline(true);
 await listener.until(`!navigator.onLine && document.body.innerText.includes('Offline')`, 'listener offline');
 await creator.until(`!navigator.onLine && document.body.innerText.includes('Offline')`, 'creator offline');
+mark('offline:on');
 await sleep(1200);
+mark('offline:done');
 
 /** Frames for the GIF: both screens, a caption, which phone is acting, how long it holds. */
 const frames = [];
@@ -196,54 +253,77 @@ console.log('recording');
 hold(...STEP.offline, 2600);
 
 // Streaming: play, open Now playing, stream once a minute; 8x speed so a minute of episode passes quickly.
+mark('stream:start');
 await listener.click(`Play ${episode}`);
 await listener.until(`!!document.querySelector('audio') && !document.querySelector('audio').paused`, 'playback');
 await listener.click('Open player:');
+await sleep(500);
 await listener.click('Stream sats');
 await listener.click('1 min');
-await listener.run(`document.querySelector('[role=switch][aria-label="Stream sats"]').scrollIntoView({ block: 'center' }); return true;`);
-await sleep(500);
+await listener.run(`document.querySelector('[role=switch][aria-label="Stream sats"]').scrollIntoView({ block: 'center', behavior: 'smooth' }); return true;`);
+await sleep(700);
+mark('stream:on');
 left = await listener.shot();
 hold(...STEP.stream, 1600, 'left');
 await listener.run(`document.querySelector('audio').playbackRate = 8; return true;`);
 await listener.until(`(await squirrelDb.list('gifts')).some((g) => g.streamed)`, 'a streamed nut', 30000);
+mark('stream:nut');
 await sleep(500);
 left = await listener.shot();
 stills.stream = left;
 hold(...STEP.stream, 2400, 'left');
 await listener.run(`document.querySelector('audio').playbackRate = 1; return true;`);
+await sleep(1000);
+mark('stream:done');
 
 // Gift by hand: 32 sats with a message, then the QR.
+mark('gift:start');
 await listener.click('Minimise');
-await listener.click('Gift');
-await listener.click('32 sats');
-await listener.fill('Danke', 'Listening on the train. Danke!');
 await sleep(300);
+await listener.click('Gift');
+await sleep(500);
+await listener.click('32 sats');
+mark('gift:type');
+await listener.type('Danke', 'Listening on the train. Danke!');
+await sleep(300);
+mark('gift:typed');
 left = await listener.shot();
 hold(...STEP.gift, 1800, 'left');
+mark('gift:send');
 await listener.click('Gift 32 sats');
 await sleep(900);
 left = await listener.shot();
 hold(...STEP.gift, 1500, 'left');
 await listener.click('Show QR (in person)');
 await sleep(900);
+mark('gift:qr');
 left = await listener.shot();
 hold(...STEP.gift, 2200, 'left');
+await sleep(1500);
+mark('gift:done');
 
 // The creator verifies the gift's token.
 const token = await listener.val(`(await squirrelDb.list('gifts')).find((g) => !g.streamed).token`);
 await creator.click('Paste a gift instead');
 await creator.fill('cashuB', token);
+await sleep(300);
+mark('verify:start');
 await creator.click('Verify');
+const verified = creator.until(`document.body.innerText.includes('Verified')`, 'Verified').then(() => mark('verify:ok'));
 await burst(creator, 'right', 2700, ...STEP.verify);
+await verified;
 right = await creator.shot();
 stills.verified = right;
 hold(...STEP.verify, 2600, 'right');
+mark('verify:done');
 
 // The receipt: signed on the creator's phone, checked on the listener's.
 await creator.run(`navigator.clipboard.writeText = async (t) => { window.__copied = t; }; return true;`);
+mark('receipt:start');
 await creator.click('Show receipt to listener');
 await sleep(900);
+mark('receipt:qr');
+await sleep(1200);
 right = await creator.shot();
 stills.receipt = right;
 hold(...STEP.receipt, 2400, 'right');
@@ -254,11 +334,14 @@ await listener.click('Scan their receipt');
 await listener.until(`!!(${findButton('Paste instead')}) || !!document.querySelector('[placeholder^="sqr1"]')`, 'receipt scanner');
 if (await listener.val(`!!(${findButton('Paste instead')})`)) await listener.click('Paste instead');
 await listener.fill('sqr1', receipt);
+await sleep(300);
+mark('receipt:check');
 await listener.click('Check receipt');
 await burst(listener, 'left', 1500, ...STEP.receipt);
 left = await listener.shot();
 stills.received = left;
 hold(...STEP.receipt, 2600, 'left');
+mark('receipt:done');
 
 // Where things stand: the listener's gifts, the creator's hoard.
 await listener.click('Done');
@@ -286,21 +369,39 @@ await sleep(900);
 stills.moments = await creator.shot();
 
 // Back online on the creator's phone only: redeem, then quote a Lightning payout.
+await creator.run(`scrollTo({ top: 0, behavior: 'smooth' }); return true;`);
+await sleep(600);
+mark('redeem:start');
 await creator.offline(false);
 await creator.until('navigator.onLine', 'creator online');
+mark('redeem:online');
+await sleep(600);
 await creator.click('Redeem all');
 await creator.until(`(await squirrelDb.list('inbox')).every((g) => g.redeemed)`, 'redeemed', 60000);
+mark('redeem:done');
+await sleep(1500);
 const invoice = await fetch(`${OTHER_MINT}/v1/mint/quote/bolt11`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ amount: 21, unit: 'sat' }) })
 	.then((r) => r.json())
 	.then((q) => q.request, () => undefined);
 if (invoice) {
+	mark('cashout:start');
 	await creator.click('Send to Lightning');
+	await sleep(500);
 	await creator.fill('you@wallet.com', invoice);
+	await sleep(400);
 	await creator.click('Get quote');
 	await creator.until(`!!${findButton('Send 21 sats')}`, 'a cash-out quote', 30000);
+	mark('cashout:quote');
 	await sleep(500);
 	stills.cashout = await creator.shot();
+	await sleep(2000);
+	mark('cashout:done');
 } else console.log(`skipped the cash-out still: ${OTHER_MINT} gave no invoice`);
+
+await Promise.all([listener.stopRecording(), creator.stopRecording()]);
+await sleep(300);
+writeFileSync(join(CAPTURE, 'capture.json'), JSON.stringify(capture));
+console.log(`${CAPTURE}: ${Object.entries(capture.frames).map(([k, f]) => `${f.length} ${k} frames`).join(', ')}`);
 
 // --- Compose: both phones side by side, the step underneath ---
 
@@ -387,5 +488,10 @@ console.log('docs/demo.gif');
 
 ws.close();
 chrome.kill();
-await sleep(500);
-rmSync(work, { recursive: true, force: true });
+await Promise.race([once(chrome, 'exit'), sleep(5000)]);
+// Chrome's crash handler can hold a file for a moment after Chrome exits.
+try {
+	rmSync(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
+} catch {
+	console.warn(`Couldn't remove ${work}: delete it once Chrome has closed`);
+}

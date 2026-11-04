@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Squirrel video stage</title>
+<!-- One frame of the launch video. scripts/make-video.mjs loads this page, calls render(t, frame)
+     for every frame and screenshots it. All motion is computed from t, so renders are repeatable. -->
+<style>
+	:root {
+		--bg: #17120e;
+		--fg: #f3ebe1;
+		--card: #221a14;
+		--muted: #a8998a;
+		--line: #3a2e24;
+		--accent: #f59e0b;
+		--ok: #4ade80;
+		--nut-amber: #f59e0b;
+		--nut-rust: #b45309;
+		--nut-shell: #8a5a2b;
+		--nut-line: #6b4320;
+		--nut-light: #fde68a;
+		--nut-ink: #2b1d12;
+	}
+	* { box-sizing: border-box; }
+	html, body { margin: 0; width: 1080px; height: 1350px; overflow: hidden; background: var(--bg); color: var(--fg); font-family: Geist, sans-serif; }
+	.abs { position: absolute; left: 0; top: 0; }
+	#bg { position: absolute; inset: 0; }
+	#world { position: absolute; inset: 0; }
+
+	/* Phones */
+	.phone { position: absolute; left: 0; top: 0; width: 403px; height: 880px; transform-origin: 50% 50%; will-change: transform; }
+	.tag { position: absolute; left: 50%; top: -58px; transform: translateX(-50%); white-space: nowrap; font: 600 22px Fredoka, sans-serif; letter-spacing: 0.02em; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+	.tag i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+	.bezel { position: absolute; inset: 0; border-radius: 60px; background: #0b0806; padding: 14px; box-shadow: 0 0 0 2px #4a3a2c, inset 0 0 0 2px #000, 0 50px 90px -30px rgba(0, 0, 0, 0.9); }
+	.glow { position: absolute; inset: -6px; border-radius: 66px; box-shadow: 0 0 0 4px var(--accent), 0 0 60px 10px rgba(245, 158, 11, 0.45); opacity: 0; }
+	.inner { position: relative; width: 375px; height: 852px; border-radius: 46px; overflow: hidden; background: var(--bg); }
+	.status { height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0 34px; font: 600 16px Geist, sans-serif; color: var(--fg); }
+	.status svg { display: block; }
+	.status .icons { display: flex; gap: 7px; align-items: center; }
+	.status .plane { display: none; color: var(--accent); }
+	.status.off .plane { display: block; }
+	.status.off .bars, .status.off .wifi { display: none; }
+	.screen { width: 375px; height: 812px; display: block; }
+	.island { position: absolute; left: 50%; top: 10px; width: 96px; height: 26px; margin-left: -48px; border-radius: 14px; background: #000; }
+	.scan { position: absolute; left: 30px; right: 30px; height: 4px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 24px 8px rgba(245, 158, 11, 0.6); opacity: 0; }
+	.speed { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); padding: 8px 16px; border-radius: 99px; background: rgba(0, 0, 0, 0.72); font: 600 18px Geist, sans-serif; color: var(--fg); opacity: 0; white-space: nowrap; }
+
+	/* Titles */
+	#titles { position: absolute; left: 0; right: 0; top: 56px; text-align: center; }
+	#badge { display: inline-block; padding: 9px 20px; border-radius: 99px; background: rgba(245, 158, 11, 0.14); color: var(--accent); font: 700 20px Geist, sans-serif; letter-spacing: 0.14em; text-transform: uppercase; }
+	#title { margin: 18px auto 0; max-width: 980px; font: 600 74px/1.04 Fredoka, sans-serif; letter-spacing: -0.01em; }
+	#title .w { display: inline-block; margin: 0 0.12em; transform-origin: 50% 80%; }
+	#title .hi { color: var(--accent); }
+	#sub { margin: 16px auto 0; max-width: 900px; font: 400 29px/1.35 Geist, sans-serif; color: var(--muted); }
+
+	/* Hook */
+	#hook { position: absolute; inset: 0; text-align: center; }
+	#hook .l1, #hook .l2 { position: absolute; left: 0; right: 0; font: 700 96px/1 Fredoka, sans-serif; letter-spacing: -0.02em; }
+	#hook .l1 { top: 300px; }
+	#hook .l2 { top: 430px; color: var(--accent); }
+	#hook .w { display: inline-block; margin: 0 0.1em; transform-origin: 50% 80%; }
+	#hook .sub { position: absolute; left: 0; right: 0; top: 590px; font: 500 32px Geist, sans-serif; color: var(--muted); }
+
+	/* Mascot */
+	.mascot { position: absolute; width: 300px; height: 350px; }
+	.sq g, .sq path, .sq circle, .sq ellipse { transform-box: fill-box; }
+	.sq-all { transform-origin: 50% 100%; }
+	.sq-tail { transform-origin: 8% 96%; }
+	.sq-head { transform-origin: 70% 90%; }
+	.sq-arms { transform-origin: 90% 10%; }
+	.sq-eye { transform-origin: 50% 50%; }
+	.sq-goggles { transform-origin: 50% 50%; }
+
+	/* Flying things */
+	.fly { position: absolute; left: 0; top: 0; width: 110px; height: 110px; margin: -55px 0 0 -55px; filter: drop-shadow(0 0 22px rgba(245, 158, 11, 0.8)); }
+	.ghost { position: absolute; left: 0; top: 0; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; background: var(--nut-light); box-shadow: 0 0 16px 4px rgba(245, 158, 11, 0.7); }
+	.chip { position: absolute; left: 0; top: 0; padding: 14px 24px 14px 18px; border-radius: 99px; background: var(--accent); color: #1a1209; font: 700 34px Fredoka, sans-serif; display: flex; gap: 10px; align-items: center; white-space: nowrap; box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.8); }
+	.chip svg { width: 44px; height: 44px; }
+	.ring { position: absolute; left: 0; top: 0; border-radius: 50%; border: 6px solid var(--accent); }
+	.confetti { position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; }
+
+	/* Airplane toggle */
+	#toggle { position: absolute; left: 540px; top: 760px; width: 400px; padding: 34px 36px; margin-left: -200px; margin-top: -90px; border-radius: 40px; background: rgba(34, 26, 20, 0.94); box-shadow: 0 0 0 2px var(--line), 0 40px 90px -20px rgba(0, 0, 0, 0.9); display: flex; align-items: center; gap: 22px; }
+	#toggle .ico { width: 70px; height: 70px; border-radius: 20px; background: var(--line); display: grid; place-items: center; color: var(--fg); }
+	#toggle .lbl { flex: 1; font: 600 32px Fredoka, sans-serif; }
+	#toggle .sw { width: 100px; height: 60px; border-radius: 30px; background: #4a3a2c; position: relative; }
+	#toggle .knob { position: absolute; top: 5px; left: 5px; width: 50px; height: 50px; border-radius: 50%; background: #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); }
+
+	/* Checklist */
+	#checks { position: absolute; left: 578px; top: 470px; width: 460px; padding: 30px 30px 14px; border-radius: 34px; background: var(--card); box-shadow: 0 0 0 2px var(--line), 0 40px 80px -30px rgba(0, 0, 0, 0.9); }
+	#checks h3 { margin: 0 0 14px; font: 700 19px Geist, sans-serif; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+	#checks .row { display: flex; gap: 18px; align-items: center; padding: 16px 0; border-top: 1px solid var(--line); }
+	#checks .row:first-of-type { border-top: 0; }
+	#checks .tick { flex: none; width: 50px; height: 50px; border-radius: 50%; background: var(--ok); color: #0c2a16; display: grid; place-items: center; }
+	#checks .txt { font: 600 27px/1.2 Fredoka, sans-serif; }
+	#checks .spec { display: block; font: 500 18px Geist, sans-serif; color: var(--muted); margin-top: 3px; }
+
+	/* Real-phone clip */
+	#clip { position: absolute; inset: 0; overflow: hidden; }
+	#clip .back { position: absolute; inset: -60px; width: calc(100% + 120px); height: calc(100% + 120px); object-fit: cover; filter: blur(40px) brightness(0.45); }
+	#clip .front { position: absolute; left: 60px; top: 360px; width: 960px; height: 940px; object-fit: contain; border-radius: 36px; }
+
+	/* Outro */
+	#outro { position: absolute; inset: 0; text-align: center; }
+	#outro .logo { position: absolute; left: 50%; top: 150px; width: 210px; height: 210px; margin-left: -105px; }
+	#outro .word { position: absolute; left: 0; right: 0; top: 390px; font: 700 150px/1 Fredoka, sans-serif; letter-spacing: -0.02em; }
+	#outro .word span { display: inline-block; transform-origin: 50% 100%; }
+	#outro .tagline { position: absolute; left: 0; right: 0; top: 580px; font: 500 40px Fredoka, sans-serif; color: var(--accent); }
+	#outro .pills { position: absolute; left: 90px; right: 90px; top: 680px; display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+	#outro .pill { padding: 12px 22px; border-radius: 99px; background: var(--card); box-shadow: 0 0 0 2px var(--line); font: 600 24px Geist, sans-serif; color: var(--fg); }
+	#outro .pill b { color: var(--accent); font-weight: 700; }
+	#outro .url { position: absolute; left: 0; right: 0; top: 860px; font: 600 38px Geist, sans-serif; color: var(--fg); }
+	#outro .tags { position: absolute; left: 0; right: 0; top: 920px; font: 500 28px Geist, sans-serif; color: var(--muted); }
+	#outro .foot { position: absolute; left: 0; right: 0; bottom: 34px; font: 400 19px Geist, sans-serif; color: #75675a; text-shadow: 0 0 4px #17110c, 0 0 10px #17110c, 0 0 16px #17110c; }
+
+	#flash { position: absolute; inset: 0; background: #fff8e6; opacity: 0; pointer-events: none; }
+	.bolt { position: absolute; left: 0; top: 0; width: 150px; height: 150px; margin: -75px 0 0 -75px; color: var(--accent); filter: drop-shadow(0 0 30px rgba(245, 158, 11, 0.9)); }
+</style>
+</head>
+<body>
+<canvas id="bg" width="1080" height="1350"></canvas>
+<div id="world"></div>
+<div id="flash"></div>
+<script src="stage.js"></script>
+</body>
+</html>

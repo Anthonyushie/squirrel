@@ -48,3 +48,7 @@ stage0/out/
 # impeccable working files (review captures, hook cache)
 /.impeccable/review/
 /.impeccable/hook.cache.json
+
+# video capture (scripts/record-demo.mjs) and render
+/.demo-capture/
+/docs/demo.mp4
