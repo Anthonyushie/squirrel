@@ -100,6 +100,7 @@ function MomentsCard({ m, online }: { m: EpisodeMoments; online: boolean }) {
 					<p className="leading-snug font-semibold">{m.episode?.title ?? `Episode ${m.ref}`}</p>
 					<p className="text-sm text-muted tabular-nums">
 						{m.gifts.length} {m.gifts.length === 1 ? 'gift' : 'gifts'} · {m.sats} sats
+						{m.streamed.length > 0 && ` · ${m.streamedSats} streamed`}
 					</p>
 				</div>
 				<button className="btn-ghost min-h-11 shrink-0 px-3 text-sm" onClick={() => setOnAir(true)}>
@@ -108,66 +109,85 @@ function MomentsCard({ m, online }: { m: EpisodeMoments; online: boolean }) {
 			</div>
 
 			<div>
-				<div className="relative h-24" onClick={onStripClick}>
-					{/* Alternating bands mark the chapters behind the bars. */}
-					{chapters.map((c, i) =>
-						i % 2 ? (
-							<span key={c.start} aria-hidden className="absolute inset-y-0 rounded-sm bg-foreground/5" style={{ left: pct(c.start), width: `calc(${pct(chapters[i + 1]?.start ?? m.duration)} - ${pct(c.start)})` }} />
-						) : null,
-					)}
-					<div role="group" aria-label="Gifts along the episode" className="relative flex h-full items-end gap-px">
-						{m.buckets.map((b, i) =>
-							b.gifts.length ? (
-								<button
-									key={i}
-									className="flex h-full flex-1 items-end"
-									aria-pressed={i === current}
-									aria-label={`${formatTime(b.start)} to ${formatTime(b.end)}: ${b.gifts.length} ${b.gifts.length === 1 ? 'gift' : 'gifts'}, ${b.sats} sats`}
-									onClick={() => choose(i)}
-								>
-									{/* Bars grow up from the baseline the first time the map appears. */}
-									<span
-										className={`w-full origin-bottom rounded-t-sm transition-colors ${i === current ? 'bg-foreground' : 'bg-accent'}`}
-										style={{ height: `${Math.max(10, (b.sats / max) * 100)}%`, animation: `grow-up 640ms var(--ease-out) ${i * 16}ms both` }}
-									/>
-								</button>
-							) : (
-								<span key={i} aria-hidden className="flex h-full flex-1 items-end">
-									<span className="h-0.5 w-full bg-line" />
-								</span>
-							),
+				{m.gifts.length > 0 && (
+					<div className="relative h-24" onClick={onStripClick}>
+						{/* Alternating bands mark the chapters behind the bars. */}
+						{chapters.map((c, i) =>
+							i % 2 ? (
+								<span key={c.start} aria-hidden className="absolute inset-y-0 rounded-sm bg-foreground/5" style={{ left: pct(c.start), width: `calc(${pct(chapters[i + 1]?.start ?? m.duration)} - ${pct(c.start)})` }} />
+							) : null,
 						)}
+						<div role="group" aria-label="Gifts along the episode" className="relative flex h-full items-end gap-px">
+							{m.buckets.map((b, i) =>
+								b.gifts.length ? (
+									<button
+										key={i}
+										className="flex h-full flex-1 items-end"
+										aria-pressed={i === current}
+										aria-label={`${formatTime(b.start)} to ${formatTime(b.end)}: ${b.gifts.length} ${b.gifts.length === 1 ? 'gift' : 'gifts'}, ${b.sats} sats`}
+										onClick={() => choose(i)}
+									>
+										{/* Bars grow up from the baseline the first time the map appears. */}
+										<span
+											className={`w-full origin-bottom rounded-t-sm transition-colors ${i === current ? 'bg-foreground' : 'bg-accent'}`}
+											style={{ height: `${Math.max(10, (b.sats / max) * 100)}%`, animation: `grow-up 640ms var(--ease-out) ${i * 16}ms both` }}
+										/>
+									</button>
+								) : (
+									<span key={i} aria-hidden className="flex h-full flex-1 items-end">
+										<span className="h-0.5 w-full bg-line" />
+									</span>
+								),
+							)}
+						</div>
 					</div>
-				</div>
+				)}
+				{/* Streamed nuts: one dot per stretch someone listened, so the lane shows how far people got. */}
+				{m.streamed.length > 0 && (
+					<div className="relative mt-2 h-3" role="img" aria-label={`${m.streamedSats} sats streamed while listening, ${m.streamed.length} nuts, from ${formatTime(m.streamed[0].seconds)} to ${formatTime(m.streamed[m.streamed.length - 1].seconds)}`}>
+						<span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-line" />
+						{m.streamed.map((g) => (
+							<span key={g.id} className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ok ring-2 ring-card" style={{ left: pct(g.seconds) }} />
+						))}
+					</div>
+				)}
 				<div className="mt-1 flex justify-between text-xs text-muted tabular-nums">
 					<span>0:00</span>
 					<span>{formatTime(m.duration)}</span>
 				</div>
+				{m.streamed.length > 0 && (
+					<p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+						<span aria-hidden className="size-2 rounded-full bg-ok" />
+						{m.streamedSats} sats streamed while people listened
+					</p>
+				)}
 			</div>
 
-			<div className="space-y-2 rounded-xl bg-background p-3" aria-live="polite">
-				<div className="flex items-baseline justify-between gap-2">
-					<p className="text-sm font-semibold tabular-nums">
-						{current === m.peak && <span className="text-accent">Peak · </span>}
-						{formatTime(bucket.start)}–{formatTime(bucket.end)}
-					</p>
-					<p className="shrink-0 text-sm text-muted tabular-nums">{bucket.sats} sats</p>
+			{m.gifts.length > 0 && (
+				<div className="space-y-2 rounded-xl bg-background p-3" aria-live="polite">
+					<div className="flex items-baseline justify-between gap-2">
+						<p className="text-sm font-semibold tabular-nums">
+							{current === m.peak && <span className="text-accent">Peak · </span>}
+							{formatTime(bucket.start)}–{formatTime(bucket.end)}
+						</p>
+						<p className="shrink-0 text-sm text-muted tabular-nums">{bucket.sats} sats</p>
+					</div>
+					{chapter && <p className="text-sm text-muted">{chapter.title}</p>}
+					<ul>
+						{bucket.gifts.map((g) => (
+							<li key={g.id}>
+								<button className="flex min-h-11 w-full items-center gap-3 text-left" onClick={() => play(g.seconds)} disabled={!src} aria-label={`Play from ${formatTime(g.seconds)}`}>
+									<span className="flex shrink-0 items-center gap-1 font-semibold text-accent tabular-nums">
+										<PlayIcon className="size-3.5" /> {formatTime(g.seconds)}
+									</span>
+									<span className="min-w-0 flex-1 text-sm">{g.message ? <>&ldquo;{g.message}&rdquo;</> : <span className="text-muted">No message</span>}</span>
+									<span className="shrink-0 text-sm text-muted tabular-nums">{g.amount}</span>
+								</button>
+							</li>
+						))}
+					</ul>
 				</div>
-				{chapter && <p className="text-sm text-muted">{chapter.title}</p>}
-				<ul>
-					{bucket.gifts.map((g) => (
-						<li key={g.id}>
-							<button className="flex min-h-11 w-full items-center gap-3 text-left" onClick={() => play(g.seconds)} disabled={!src} aria-label={`Play from ${formatTime(g.seconds)}`}>
-								<span className="flex shrink-0 items-center gap-1 font-semibold text-accent tabular-nums">
-									<PlayIcon className="size-3.5" /> {formatTime(g.seconds)}
-								</span>
-								<span className="min-w-0 flex-1 text-sm">{g.message ? <>&ldquo;{g.message}&rdquo;</> : <span className="text-muted">No message</span>}</span>
-								<span className="shrink-0 text-sm text-muted tabular-nums">{g.amount}</span>
-							</button>
-						</li>
-					))}
-				</ul>
-			</div>
+			)}
 
 			{src ? (
 				<div className="space-y-1">
@@ -211,6 +231,7 @@ function OnAir({ m, onClose }: { m: EpisodeMoments; onClose: () => void }) {
 						);
 					})}
 				</ol>
+				{m.streamed.length > 0 && <p className="text-sm text-muted">Plus {m.streamedSats} sats streamed by listeners while they played the episode.</p>}
 				<button
 					className="btn-ghost w-full"
 					onClick={async () => {

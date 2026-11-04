@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { nip19 } from 'nostr-tools';
-import { CopyText, Notice } from '@/components/ui';
-import { haptic, setFeelPrefs, sfx, useFeelPrefs } from '@/lib/feel';
+import { CopyText, Notice, Toggle } from '@/components/ui';
+import { setFeelPrefs, sfx, useFeelPrefs } from '@/lib/feel';
 import { getSetting } from '@/lib/db';
 import { useOnline } from '@/lib/hooks';
 import { ensureListenerKeys, ensureNostrKeys, getCreatorKeys, normalizeLockKey } from '@/lib/keys';
@@ -227,28 +227,5 @@ function FeelSettings() {
 			/>
 			<Toggle label="Calm animations" hint="Shorter moments every time. Your phone's reduce-motion setting turns travel off entirely." checked={prefs.calm} onChange={(calm) => setFeelPrefs({ calm })} />
 		</section>
-	);
-}
-
-function Toggle({ label, hint, checked, onChange }: { label: string; hint: string; checked: boolean; onChange: (on: boolean) => void }) {
-	return (
-		<div className="flex items-center justify-between gap-4">
-			<div>
-				<p className="font-semibold">{label}</p>
-				<p className="text-sm text-muted">{hint}</p>
-			</div>
-			<button
-				role="switch"
-				aria-checked={checked}
-				aria-label={label}
-				onClick={() => {
-					onChange(!checked);
-					haptic('tick');
-				}}
-				className={`relative h-8 w-14 shrink-0 rounded-full transition-colors duration-200 ${checked ? 'bg-accent' : 'bg-line'}`}
-			>
-				<span className={`absolute top-1 left-1 size-6 rounded-full bg-white shadow-[0_2px_4px_rgb(0_0_0/0.3)] transition-transform duration-200 ease-[var(--ease-out)] ${checked ? 'translate-x-6' : ''}`} />
-			</button>
-		</div>
 	);
 }

@@ -8,7 +8,7 @@ import { Rolling } from '@/components/feel/Rolling';
 import { Squirrel, usePose, type Pose } from '@/components/feel/Squirrel';
 import { CopyText, Notice, Overlay, Sheet } from '@/components/ui';
 import { cacheAcceptedMints, listInbox, redeemAll, redeemedTokens } from '@/lib/creator';
-import { getSetting, list, put, type InboxGift, type MintKeysRecord } from '@/lib/db';
+import { getSetting, list, put, type InboxGift, type MintKeysRecord, type SettingsMap } from '@/lib/db';
 import { refreshFeed } from '@/lib/episodes';
 import { chapterAt, formatTime, type Episode } from '@/lib/feed';
 import { haptic, playMoment, sfx, type Play } from '@/lib/feel';
@@ -17,7 +17,9 @@ import { useOnline } from '@/lib/hooks';
 import { getCreatorKeys, keypairFromPriv, newP2PKKeypair, setCreatorKeys } from '@/lib/keys';
 import { mintHost } from '@/lib/settings';
 import { verifyGift, type Verification } from '@/lib/verify';
+import { CashOut } from './CashOut';
 import { Moments } from './Moments';
+import { ReceiptQr } from './ReceiptQr';
 import { Receive } from './Receive';
 import { Scanner } from './Scanner';
 
@@ -30,6 +32,9 @@ export function Creator() {
 	const [scanning, setScanning] = useState(false);
 	const [pasting, setPasting] = useState(false);
 	const [result, setResult] = useState<Verification>();
+	const [receipt, setReceipt] = useState<{ id: string; amount: number }>();
+	const [cashingOut, setCashingOut] = useState<string>();
+	const [cashOuts, setCashOuts] = useState<SettingsMap['cashOuts']>([]);
 	const [redeeming, setRedeeming] = useState<string>();
 	const [version, setVersion] = useState(0);
 	const [pose, play] = usePose();
@@ -37,10 +42,11 @@ export function Creator() {
 	useEffect(() => {
 		(async () => {
 			// Read everything first and set it together, so the hoard renders with its nuts already in.
-			const [k, gifts, mintKeys, feed] = await Promise.all([getCreatorKeys(), listInbox(), list('mintKeys'), getSetting('feed')]);
+			const [k, gifts, mintKeys, feed, paidOut] = await Promise.all([getCreatorKeys(), listInbox(), list('mintKeys'), getSetting('feed'), getSetting('cashOuts')]);
 			setKeys(k ?? null);
 			setInbox(gifts);
 			setMints(mintKeys);
+			setCashOuts(paidOut ?? []);
 			// Map memo episode refs back to episodes using this phone's copy of the feed, if any.
 			setEpisodes(new Map((feed?.episodes ?? []).map((e) => [episodeRef(e.guid), e])));
 		})();
@@ -180,10 +186,16 @@ export function Creator() {
 										</div>
 										{g.message && <p className="text-sm">&ldquo;{g.message}&rdquo;</p>}
 										<p className="truncate text-xs text-muted">
+											{g.streamed && 'Streamed while listening · '}
 											{g.seconds !== undefined && `at ${formatTime(g.seconds)}`}
 											{g.episodeRef && episodes.get(g.episodeRef) ? ` · ${episodes.get(g.episodeRef)!.title}` : ''} · {mintHost(g.mintUrl)}
 										</p>
 										{g.redeemError && <p className="text-xs text-bad">{g.redeemError}</p>}
+										{g.via !== 'nutzap' && !g.redeemed && (
+											<button className="btn-ghost min-h-10 w-full text-sm lg:w-auto" onClick={() => setReceipt({ id: g.id, amount: g.amount })}>
+												Show receipt
+											</button>
+										)}
 									</div>
 								</li>
 							))}
@@ -191,18 +203,33 @@ export function Creator() {
 					)}
 				</section>
 
-				{tokens.length > 0 && (
+				{(tokens.length > 0 || cashOuts.length > 0) && (
 					<section className="card space-y-3">
 						<h2 className="text-lg">Your redeemed sats</h2>
-						<p className="text-sm text-muted">Unlocked and yours. Paste into any Cashu wallet to move them.</p>
+						<p className="text-sm text-muted">{tokens.length ? 'Unlocked and yours. Send them to your Lightning wallet, or paste the token into any Cashu wallet.' : 'All sent on. New gifts land here once you redeem them.'}</p>
 						{tokens.map((t) => (
-							<div key={t.mintUrl}>
+							<div key={t.mintUrl} className="space-y-2">
 								<span className="label">
 									{t.amount} sats · {mintHost(t.mintUrl)}
 								</span>
+								<button className="btn-primary w-full" onClick={() => setCashingOut(t.mintUrl)} disabled={!online}>
+									Send to Lightning
+								</button>
 								<CopyText value={t.token} label="redeemed token" />
 							</div>
 						))}
+						{cashOuts.length > 0 && (
+							<ul className="space-y-1 border-t border-line pt-3 text-sm" aria-label="Sent to Lightning">
+								{cashOuts.slice(0, 5).map((c) => (
+									<li key={c.at} className="flex justify-between gap-3">
+										<span className="min-w-0 truncate">
+											{c.pending ? 'Pending' : 'Sent'} to {c.to.includes('@') ? c.to : 'an invoice'} · <span className="text-muted">{new Date(c.at).toLocaleDateString()}</span>
+										</span>
+										<span className="num shrink-0 text-muted">{c.amount} sats</span>
+									</li>
+								))}
+							</ul>
+						)}
 					</section>
 				)}
 
@@ -222,7 +249,26 @@ export function Creator() {
 
 			{scanning && <Scanner onResult={onScan} onClose={() => setScanning(false)} />}
 			{pasting && <PasteSheet onSubmit={onScan} onClose={() => setPasting(false)} />}
-			{result && <ResultScreen v={result} episode={result.episodeRef ? episodes.get(result.episodeRef) : undefined} onClose={() => setResult(undefined)} />}
+			{result && (
+				<ResultScreen
+					v={result}
+					episode={result.episodeRef ? episodes.get(result.episodeRef) : undefined}
+					onClose={() => setResult(undefined)}
+					onReceipt={(id, amount) => {
+						setResult(undefined);
+						setReceipt({ id, amount });
+					}}
+				/>
+			)}
+			{receipt && <ReceiptQr id={receipt.id} amount={receipt.amount} lockPriv={keys.priv} onClose={() => setReceipt(undefined)} />}
+			{cashingOut && (
+				<CashOut
+					mintUrl={cashingOut}
+					available={tokens.find((t) => t.mintUrl === cashingOut)?.amount ?? 0}
+					onClose={() => setCashingOut(undefined)}
+					onChange={() => setVersion((n) => n + 1)}
+				/>
+			)}
 		</div>
 	);
 }
@@ -318,10 +364,12 @@ const PACE: Record<Play, number> = { full: 1, short: 0.45, still: 0 };
  * The creator's big moment: the nut drops in, each offline check ticks in one by one, then the
  * verdict stamps down. Everything is in the DOM from the start; the timing is only presentation.
  */
-function ResultScreen({ v, episode, onClose }: { v: Verification; episode?: Episode; onClose: () => void }) {
+function ResultScreen({ v, episode, onClose, onReceipt }: { v: Verification; episode?: Episode; onClose: () => void; onReceipt: (id: string, amount: number) => void }) {
 	const failed = v.checks.filter((c) => !c.ok);
 	const chapter = v.seconds !== undefined ? chapterAt(episode?.chapters, v.seconds) : undefined;
 	const duplicate = failed.length === 1 && failed[0].id === 'duplicate';
+	// Only a nut that is really locked to this key gets a receipt: verified now, or verified before.
+	const receiptFor = (v.ok || duplicate) && v.id ? v.id : undefined;
 	const [play] = useState(() => playMoment(v.ok ? 'verified' : 'rejected'));
 	const pace = PACE[play];
 	const land = 430 * pace;
@@ -433,9 +481,20 @@ function ResultScreen({ v, episode, onClose }: { v: Verification; episode?: Epis
 						</li>
 					))}
 				</ul>
-				<button className="btn mx-auto w-full max-w-sm bg-white text-black" onClick={onClose} style={rise(verdictAt + 200 * pace)}>
-					Done
-				</button>
+				{receiptFor ? (
+					<div className="mx-auto w-full max-w-sm space-y-1" style={rise(verdictAt + 200 * pace)}>
+						<button className="btn w-full bg-white text-black" onClick={() => onReceipt(receiptFor, v.amount)}>
+							Show receipt to listener
+						</button>
+						<button className="btn w-full text-white/90" onClick={onClose}>
+							Done
+						</button>
+					</div>
+				) : (
+					<button className="btn mx-auto w-full max-w-sm bg-white text-black" onClick={onClose} style={rise(verdictAt + 200 * pace)}>
+						Done
+					</button>
+				)}
 			</div>
 		</Overlay>
 	);

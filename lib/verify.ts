@@ -26,7 +26,10 @@ export type Verification = {
 	message: string;
 	episodeRef?: string;
 	seconds?: number;
+	streamed?: boolean;
 	locktime: number;
+	/** The nut's inbox id, once the token decodes: what a receipt signs. */
+	id?: string;
 	/** Inbox record to store when ok. */
 	record?: InboxGift;
 };
@@ -134,6 +137,7 @@ export async function verifyGift(token: string, myLockKey: string, nowSec = Math
 		...base,
 		amount,
 		locktime: hasLocktime ? locktime : 0,
+		id,
 		record: ok
 			? {
 					id,
@@ -143,6 +147,7 @@ export async function verifyGift(token: string, myLockKey: string, nowSec = Math
 					message: memo.message,
 					episodeRef: memo.episodeRef,
 					seconds: memo.seconds,
+					...(memo.streamed && { streamed: true }),
 					checks: { lock: lockOk, locktime: lockTimeOk, dleq: dleqOk },
 					locktime: hasLocktime ? locktime : 0,
 					redeemed: false,

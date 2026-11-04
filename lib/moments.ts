@@ -15,15 +15,20 @@ export type EpisodeMoments = {
 	/** From this phone's copy of the feed; missing if the feed hasn't loaded or is older than the episode. */
 	episode?: Episode;
 	duration: number;
-	/** In episode order. */
+	/** Gifts made by hand, in episode order. */
 	gifts: PlacedGift[];
 	sats: number;
+	/** Nuts streamed while listeners played the episode, in episode order: how far people listened. */
+	streamed: PlacedGift[];
+	streamedSats: number;
 	buckets: Bucket[];
 	/** Index of the bucket with the most sats. */
 	peak: number;
 };
 
 const placed = (g: InboxGift): g is PlacedGift => !!g.episodeRef && g.seconds !== undefined;
+const sum = (gifts: PlacedGift[]) => gifts.reduce((a, g) => a + g.amount, 0);
+const latest = (m: EpisodeMoments) => Math.max(...[...m.gifts, ...m.streamed].map((g) => g.receivedAt));
 
 /** Groups inbox gifts by episode and buckets them along its timeline, most recently gifted episode first. */
 export function episodeMoments(inbox: InboxGift[], episodes: Map<string, Episode>): EpisodeMoments[] {
@@ -33,8 +38,11 @@ export function episodeMoments(inbox: InboxGift[], episodes: Map<string, Episode
 	return [...byRef.entries()]
 		.map(([ref, unsorted]) => {
 			const episode = episodes.get(ref);
-			const gifts = [...unsorted].sort((a, b) => a.seconds - b.seconds);
-			const last = gifts[gifts.length - 1].seconds;
+			const all = [...unsorted].sort((a, b) => a.seconds - b.seconds);
+			// Streamed nuts land every few minutes whatever is said, so they stay out of the peaks.
+			const gifts = all.filter((g) => !g.streamed);
+			const streamed = all.filter((g) => g.streamed);
+			const last = all[all.length - 1].seconds;
 			// Without a duration from the feed, stretch the timeline a little past the last gift.
 			const duration = Math.max(episode?.duration || Math.ceil(last * 1.1), last + 1, 60);
 			const size = duration / BUCKETS;
@@ -51,9 +59,9 @@ export function episodeMoments(inbox: InboxGift[], episodes: Map<string, Episode
 				return b.sats > top.sats || (b.sats === top.sats && b.gifts.length > top.gifts.length) ? i : best;
 			}, 0);
 
-			return { ref, episode, duration, gifts, sats: gifts.reduce((a, g) => a + g.amount, 0), buckets, peak };
+			return { ref, episode, duration, gifts, sats: sum(gifts), streamed, streamedSats: sum(streamed), buckets, peak };
 		})
-		.sort((a, b) => Math.max(...b.gifts.map((g) => g.receivedAt)) - Math.max(...a.gifts.map((g) => g.receivedAt)));
+		.sort((a, b) => latest(b) - latest(a));
 }
 
 /** Index of the bucket that holds `seconds`. */
@@ -75,5 +83,6 @@ export function onAirText(m: EpisodeMoments) {
 		const head = [formatTime(g.seconds), `${g.amount} sats`, chapter?.title].filter(Boolean).join(' · ');
 		return g.message ? `${head}\n"${g.message}"` : head;
 	});
-	return [`Squirrel gifts · ${m.episode?.title ?? 'Episode'}`, `${m.gifts.length} gifts · ${m.sats} sats`, ...lines].join('\n\n');
+	const stream = m.streamed.length ? [`Plus ${m.streamedSats} sats streamed by listeners while they played the episode`] : [];
+	return [`Squirrel gifts · ${m.episode?.title ?? 'Episode'}`, `${m.gifts.length} gifts · ${m.sats} sats`, ...lines, ...stream].join('\n\n');
 }

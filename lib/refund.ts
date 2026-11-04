@@ -86,7 +86,7 @@ export async function checkRedeemed(): Promise<number> {
 	if (!navigator.onLine) return 0;
 	const [jars, gifts] = await Promise.all([list('jars'), list('gifts')]);
 	// Queued gifts never left the device, so the creator can't have spent those yet.
-	const out = gifts.filter((g) => !g.reclaimed && (g.status === 'created' || g.status === 'handed_over' || g.status === 'published'));
+	const out = gifts.filter((g) => !g.reclaimed && (g.status === 'created' || g.status === 'handed_over' || g.status === 'published' || g.status === 'received'));
 
 	const byMint = new Map<string, { gift: Gift; jarId: string; index: number; proof: Proof }[]>();
 	for (const gift of out) {

@@ -16,7 +16,20 @@ declare global {
  * Full-screen camera QR scanner. Uses the native BarcodeDetector where it exists (Chrome on
  * Android) and jsQR everywhere else (iOS Safari). Works offline; needs HTTPS for the camera.
  */
-export function Scanner({ onResult, onClose }: { onResult: (text: string) => void; onClose: () => void }) {
+export function Scanner({
+	onResult,
+	onClose,
+	label = 'Scan gift',
+	hint = "Point at the gift QR on the listener's phone",
+	onPaste,
+}: {
+	onResult: (text: string) => void;
+	onClose: () => void;
+	label?: string;
+	hint?: string;
+	/** Offers pasting the code instead, for one-phone demos and browsers without a camera. */
+	onPaste?: () => void;
+}) {
 	const video = useRef<HTMLVideoElement>(null);
 	// Camera access needs a secure context (HTTPS or localhost); without it mediaDevices is missing.
 	const [error, setError] = useState(() => (navigator.mediaDevices ? '' : 'Camera needs HTTPS. Open the deployed app, or paste the gift instead.'));
@@ -77,7 +90,7 @@ export function Scanner({ onResult, onClose }: { onResult: (text: string) => voi
 
 	return (
 		<Overlay>
-			<div className="fixed inset-0 z-50 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label="Scan gift">
+			<div className="fixed inset-0 z-50 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={label}>
 				<video ref={video} className="absolute inset-0 size-full object-cover" playsInline muted />
 				<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
 					<div
@@ -90,10 +103,15 @@ export function Scanner({ onResult, onClose }: { onResult: (text: string) => voi
 					</div>
 				</div>
 				<div className="relative mt-auto space-y-3 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center">
-					{error ? <p className="rounded-xl bg-black/70 p-3 text-sm">{error}</p> : <p className="text-sm text-white/80">Point at the gift QR on the listener&apos;s phone</p>}
+					{error ? <p className="rounded-xl bg-black/70 p-3 text-sm">{error}</p> : <p className="text-sm text-white/80">{hint}</p>}
 					<button className="btn w-full bg-white text-black" onClick={onClose}>
 						Cancel
 					</button>
+					{onPaste && (
+						<button className="btn w-full text-sm text-white/85" onClick={onPaste}>
+							Paste instead
+						</button>
+					)}
 				</div>
 			</div>
 		</Overlay>

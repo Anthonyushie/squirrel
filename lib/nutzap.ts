@@ -5,7 +5,7 @@ import { finalizeEvent, nip19, type VerifiedEvent } from 'nostr-tools';
 import { SimplePool } from 'nostr-tools/pool';
 import { get, getSetting, list, put, type Gift, type Jar } from './db';
 import { formatTime } from './feed';
-import { MEMO_TAG } from './gift';
+import { MEMO_TAG, isGiftMemo } from './gift';
 import { ensureNostrKeys, normalizeLockKey } from './keys';
 import { cachedWallet } from './mint';
 import { DEFAULT_RELAYS, lookupNutzapInfo, npubToHex } from './nostr';
@@ -24,7 +24,7 @@ export function buildNutzapEvent(opts: {
 	// Bare proofs drop the token memo, so the gift's episode and moment ride in a tag of their own
 	// for the creator's moments map. The NIP-73 podcast id lets other clients attach it to the episode.
 	const context = [
-		...(memo?.startsWith('sq1|') ? [[MEMO_TAG, memo]] : []),
+		...(memo && isGiftMemo(memo) ? [[MEMO_TAG, memo]] : []),
 		...(opts.episodeGuid ? [['i', `podcast:item:guid:${opts.episodeGuid}`], ['k', 'podcast:item:guid']] : []),
 	];
 	return finalizeEvent(
@@ -56,6 +56,7 @@ export async function recipientNpub(jar: Jar, jars?: Jar[]): Promise<string | un
 
 export function nutzapContent(gift: Gift) {
 	const where = `at ${formatTime(gift.seconds)} in ${gift.episodeTitle}`;
+	if (gift.streamed) return `Streamed while listening, ${where}`;
 	return gift.message ? `${gift.message} (${where})` : `Gift from Squirrel, ${where}`;
 }
 

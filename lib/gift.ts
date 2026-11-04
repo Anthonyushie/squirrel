@@ -9,19 +9,24 @@ export const MESSAGE_MAX = 100;
 /** Short episode reference for the memo: the creator maps it back via their own copy of the feed. */
 export const episodeRef = (guid: string) => bytesToHex(sha256(utf8ToBytes(guid))).slice(0, 8);
 
-// Gift memo inside the standard cashuB memo field: "sq1|<episode ref>|<seconds>|<message>".
-// Any Cashu wallet can still redeem the token; Squirrel just reads extra context out of it.
-export function encodeMemo(episodeGuid: string, seconds: number, message: string) {
-	return `sq1|${episodeRef(episodeGuid)}|${Math.floor(seconds)}|${message.slice(0, MESSAGE_MAX)}`;
+// Gift memo inside the standard cashuB memo field: "sq1|<episode ref>|<seconds>|<message>", or
+// "sq1s|…" for a nut streamed while listening. Any Cashu wallet can still redeem the token;
+// Squirrel just reads extra context out of it.
+export function encodeMemo(episodeGuid: string, seconds: number, message: string, streamed = false) {
+	return `${streamed ? 'sq1s' : 'sq1'}|${episodeRef(episodeGuid)}|${Math.floor(seconds)}|${message.slice(0, MESSAGE_MAX)}`;
 }
 
 /** Nutzap tag carrying the same memo, since a kind 9321 holds bare proofs with no token memo. */
 export const MEMO_TAG = 'squirrel';
 
-export function decodeMemo(memo?: string): { episodeRef?: string; seconds?: number; message: string } {
-	if (!memo?.startsWith('sq1|')) return { message: memo ?? '' };
+const MEMO = /^sq1(s?)\|/;
+export const isGiftMemo = (memo?: string) => !!memo && MEMO.test(memo);
+
+export function decodeMemo(memo?: string): { episodeRef?: string; seconds?: number; message: string; streamed?: boolean } {
+	const kind = memo?.match(MEMO);
+	if (!memo || !kind) return { message: memo ?? '' };
 	const [, ref, secs, ...rest] = memo.split('|');
-	return { episodeRef: ref || undefined, seconds: Number(secs) || 0, message: rest.join('|') };
+	return { episodeRef: ref || undefined, seconds: Number(secs) || 0, message: rest.join('|'), ...(kind[1] && { streamed: true }) };
 }
 
 /** Groups jars that lock to the same creator key on the same mint. */
@@ -52,6 +57,9 @@ export async function createGift(opts: {
 	episodeGuid: string;
 	episodeTitle: string;
 	seconds: number;
+	/** Queue it as a nutzap in the same write, rather than leaving it for the giver to deliver. */
+	queue?: boolean;
+	streamed?: boolean;
 }): Promise<Gift> {
 	const group = creatorJars(await list('jars')).find((g) => g.key === opts.groupKey);
 	if (!group) throw new Error('No jar for this creator');
@@ -69,7 +77,7 @@ export async function createGift(opts: {
 		mint: pick.jar.mintUrl,
 		unit: 'sat',
 		proofs: [proof],
-		memo: encodeMemo(opts.episodeGuid, opts.seconds, opts.message),
+		memo: encodeMemo(opts.episodeGuid, opts.seconds, opts.message, opts.streamed),
 	});
 
 	const gift: Gift = {
@@ -81,7 +89,9 @@ export async function createGift(opts: {
 		episodeTitle: opts.episodeTitle,
 		seconds: Math.floor(opts.seconds),
 		message: opts.message.slice(0, MESSAGE_MAX),
-		status: 'created',
+		status: opts.queue ? 'queued' : 'created',
+		...(opts.queue && { delivery: 'queue' as const }),
+		...(opts.streamed && { streamed: true }),
 		createdAt: Date.now(),
 	};
 
@@ -108,5 +118,6 @@ export const STATUS_LABEL: Record<GiftStatus, string> = {
 	handed_over: 'Handed over',
 	queued: 'Sends when online',
 	published: 'Sent as nutzap',
+	received: 'Receipt signed',
 	redeemed: 'Redeemed',
 };

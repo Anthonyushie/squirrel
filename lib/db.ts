@@ -31,7 +31,7 @@ export type Jar = {
 	createdAt: number;
 };
 
-export type GiftStatus = 'created' | 'handed_over' | 'queued' | 'published' | 'redeemed';
+export type GiftStatus = 'created' | 'handed_over' | 'queued' | 'published' | 'received' | 'redeemed';
 
 export type Gift = {
 	id: string;
@@ -49,6 +49,10 @@ export type Gift = {
 	sendError?: string;
 	/** Set when the giver took the nut back after the locktime. */
 	reclaimed?: boolean;
+	/** Dropped by streaming while the episode played, rather than gifted by hand. */
+	streamed?: boolean;
+	/** When the listener's phone checked the creator's signed receipt for this gift. */
+	receiptAt?: number;
 	createdAt: number;
 };
 
@@ -60,6 +64,8 @@ export type InboxGift = {
 	message: string;
 	episodeRef?: string;
 	seconds?: number;
+	/** A nut the listener's phone streamed while they played the episode. */
+	streamed?: boolean;
 	checks: { lock: boolean; locktime: boolean; dleq: boolean };
 	locktime: number;
 	/** How it arrived: scanned or pasted in person, or collected from Nostr as a NIP-61 nutzap. */
@@ -110,6 +116,12 @@ export type SettingsMap = {
 	feed: Show & { fetchedAt: number };
 	/** Invoices created but not yet minted, so a paid one is never lost if the app closes. */
 	pendingQuotes: { mintUrl: string; quote: string; amount: number; createdAt: number }[];
+	/** Streaming sats while listening: off until the listener turns it on. */
+	stream: { on: boolean; everyMinutes: number; capPerEpisode: number };
+	/** The creator's Lightning payouts from redeemed sats, newest first. */
+	cashOuts: { mintUrl: string; to: string; amount: number; fees: number; pending?: boolean; at: number }[];
+	/** Where the creator last cashed out to. */
+	cashOutTo: string;
 };
 
 interface SquirrelDB extends DBSchema {

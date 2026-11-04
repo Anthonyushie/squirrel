@@ -12,6 +12,7 @@ import { MESSAGE_MAX, availableSizes, createGift, creatorJars, setGiftStatus } f
 import { useOnline } from '@/lib/hooks';
 import { eventLink, recipientNpub } from '@/lib/nutzap';
 import { NUT_SIZES } from '@/lib/wallet';
+import { ReceiptScan } from './Receipt';
 
 type Props = {
 	episode: { guid: string; title: string };
@@ -29,6 +30,7 @@ export function GiftSheet({ episode, seconds, onClose, onChange }: Props) {
 	const [gift, setGift] = useState<Gift>();
 	const [npubs, setNpubs] = useState<Map<string, string | undefined>>(new Map());
 	const [showQr, setShowQr] = useState(false);
+	const [scanningReceipt, setScanningReceipt] = useState(false);
 	const [error, setError] = useState('');
 	const online = useOnline();
 	const cardNuts = useRef(new Map<number, SVGSVGElement>());
@@ -127,15 +129,27 @@ export function GiftSheet({ episode, seconds, onClose, onChange }: Props) {
 
 	if (showQr && gift) {
 		return (
-			<GiftQr
-				gift={gift}
-				creatorName={group?.name ?? 'the creator'}
-				onDone={async () => {
-					await setGiftStatus(gift.id, 'handed_over');
-					onChange();
-					onClose();
-				}}
-			/>
+			<>
+				<GiftQr
+					gift={gift}
+					creatorName={group?.name ?? 'the creator'}
+					onDone={async () => {
+						await setGiftStatus(gift.id, 'handed_over');
+						onChange();
+						onClose();
+					}}
+					onReceipt={() => setScanningReceipt(true)}
+				/>
+				{scanningReceipt && (
+					<ReceiptScan
+						onChange={onChange}
+						onClose={(received) => {
+							setScanningReceipt(false);
+							if (received) onClose();
+						}}
+					/>
+				)}
+			</>
 		);
 	}
 
@@ -266,7 +280,7 @@ export function GiftSheet({ episode, seconds, onClose, onChange }: Props) {
 }
 
 /** Full-screen, high-contrast QR for the creator to scan. Nothing ever sits on the code itself. */
-export function GiftQr({ gift, creatorName, onDone }: { gift: Gift; creatorName: string; onDone: () => void }) {
+export function GiftQr({ gift, creatorName, onDone, onReceipt }: { gift: Gift; creatorName: string; onDone: () => void; onReceipt: () => void }) {
 	return (
 		<Overlay>
 			<div
@@ -285,8 +299,8 @@ export function GiftQr({ gift, creatorName, onDone }: { gift: Gift; creatorName:
 				<div className="w-full max-w-sm [animation:rise-in_480ms_120ms_var(--ease-out)_both]">
 					<QRCodeSVG value={gift.token} level="L" marginSize={2} className="h-auto w-full" size={512} />
 				</div>
-				<div className="w-full max-w-sm space-y-3 text-center">
-					<p className="text-sm text-neutral-600">Turn your screen brightness up for a quick scan.</p>
+				<div className="w-full max-w-sm space-y-2 text-center">
+					<p className="pb-1 text-sm text-neutral-600">Turn your screen brightness up for a quick scan.</p>
 					<button
 						className="btn w-full bg-black text-white"
 						onClick={() => {
@@ -295,6 +309,9 @@ export function GiftQr({ gift, creatorName, onDone }: { gift: Gift; creatorName:
 						}}
 					>
 						Done, they scanned it
+					</button>
+					<button className="btn w-full text-sm text-neutral-700" onClick={onReceipt}>
+						Scan their receipt
 					</button>
 				</div>
 			</div>

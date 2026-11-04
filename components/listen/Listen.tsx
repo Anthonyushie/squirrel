@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDownIcon, DownloadIcon, ForwardIcon, PauseIcon, PlayIcon, ReplayIcon, TrashIcon } from '@/components/feel/icons';
 import { Nut, NutChip } from '@/components/feel/Nut';
-import { Sheet } from '@/components/ui';
+import { QUEUED } from '@/components/Sync';
+import { Notice, Sheet, Toggle } from '@/components/ui';
 import { getSetting, savedEpisodeGuids, type EpisodeRecord } from '@/lib/db';
 import { deleteSavedEpisode, downloadEpisode, getSavedEpisode, refreshFeed } from '@/lib/episodes';
 import { formatBytes, formatTime, type Episode, type Show } from '@/lib/feed';
-import { haptic } from '@/lib/feel';
+import { haptic, sfx } from '@/lib/feel';
 import { useOnline } from '@/lib/hooks';
+import { STREAM_CAPS, STREAM_EVERY, STREAM_NUT, loadStreamPrefs, saveStreamPrefs, streamNut, streamTarget, streamedSats, type StreamPrefs } from '@/lib/stream';
 import { GiftSheet } from './GiftSheet';
 import { Gifts } from './Gifts';
 import { Onboarding } from './Onboarding';
@@ -135,7 +137,7 @@ export function Listen() {
 					<>
 						{/* Room for the docked player above the tab bar. */}
 						<div aria-hidden className="h-20" />
-						<Player episode={playing} artwork={playing.image ?? show?.image} onGift={bump} onPausedChange={setPaused} />
+						<Player key={playing.guid} episode={playing} artwork={playing.image ?? show?.image} onGift={bump} onPausedChange={setPaused} />
 					</>
 				)}
 			</div>
@@ -255,10 +257,87 @@ function Player({ episode, artwork, onGift, onPausedChange }: { episode: Episode
 	const [paused, setPaused] = useState(true);
 	const [time, setTime] = useState(0);
 	const [duration, setDuration] = useState(episode.duration);
+	const [stream, setStream] = useState<StreamPrefs>();
+	const [streamed, setStreamed] = useState(0);
+	const [streamNote, setStreamNote] = useState('');
+	// Bumped per streamed nut, so the counter in the mini player pops.
+	const [drops, setDrops] = useState(0);
+	const listened = useRef(0);
+	const lastTime = useRef<number>(undefined);
+	const dropping = useRef(false);
 
 	// Play from the stored Blob, never from the network.
 	const src = useMemo(() => URL.createObjectURL(episode.audio), [episode]);
 	useEffect(() => () => URL.revokeObjectURL(src), [src]);
+
+	useEffect(() => {
+		Promise.all([loadStreamPrefs(), streamedSats(episode.guid)]).then(([prefs, sats]) => {
+			setStream(prefs);
+			setStreamed(sats);
+		});
+	}, [episode.guid]);
+
+	async function changeStream(patch: Partial<StreamPrefs>) {
+		if (!stream) return;
+		if (patch.on) {
+			const target = await streamTarget();
+			if ('reason' in target) {
+				setStreamNote(target.reason);
+				haptic('error');
+				return;
+			}
+			listened.current = 0;
+		}
+		const next = { ...stream, ...patch };
+		setStreamNote('');
+		setStream(next);
+		await saveStreamPrefs(next);
+	}
+
+	/** One stretch listened: one 8-sat nut becomes a queued gift at this moment. */
+	async function dropNut(seconds: number) {
+		if (!stream || dropping.current) return;
+		dropping.current = true;
+		try {
+			// Count from the gifts, not this screen: the cap holds even across reloads.
+			const sofar = await streamedSats(episode.guid);
+			setStreamed(sofar);
+			if (sofar + STREAM_NUT > stream.capPerEpisode) return;
+			const target = await streamTarget();
+			if ('reason' in target) {
+				setStreamNote(target.reason);
+				return;
+			}
+			await streamNut({ groupKey: target.groupKey, episodeGuid: episode.guid, episodeTitle: episode.title, seconds });
+			setStreamed(sofar + STREAM_NUT);
+			setStreamNote('');
+			setDrops((n) => n + 1);
+			sfx.clink();
+			haptic('tick');
+			onGift();
+			window.dispatchEvent(new Event(QUEUED));
+		} catch (e) {
+			setStreamNote((e as Error).message);
+		} finally {
+			dropping.current = false;
+		}
+	}
+
+	function onTime(t: number) {
+		setTime(t);
+		const prev = lastTime.current;
+		lastTime.current = t;
+		if (!stream?.on || prev === undefined || streamed + STREAM_NUT > stream.capPerEpisode) return;
+		// Only audio that actually played counts: a seek jumps further than a few seconds.
+		const d = t - prev;
+		if (d <= 0 || d > 3) return;
+		listened.current += d;
+		const every = stream.everyMinutes * 60;
+		if (listened.current >= every) {
+			listened.current -= every;
+			dropNut(t);
+		}
+	}
 
 	function gift() {
 		audio.current?.pause();
@@ -310,7 +389,7 @@ function Player({ episode, artwork, onGift, onPausedChange }: { episode: Episode
 					setPaused(true);
 					onPausedChange(true);
 				}}
-				onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+				onTimeUpdate={(e) => onTime(e.currentTarget.currentTime)}
 				onLoadedMetadata={(e) => Number.isFinite(e.currentTarget.duration) && setDuration(e.currentTarget.duration)}
 			/>
 			{/* Desktop: no tab bar, so it docks to the window's bottom edge with seek and artwork inline. */}
@@ -331,8 +410,17 @@ function Player({ episode, artwork, onGift, onPausedChange }: { episode: Episode
 						<div className="mt-1.5 h-1 overflow-hidden rounded-full bg-line">
 							<div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
 						</div>
-						<p className="num mt-1 text-xs text-muted">
-							{formatTime(time)} / {formatTime(duration)}
+						<p className="num mt-1 flex items-center gap-1.5 text-xs text-muted">
+							<span>
+								{formatTime(time)} / {formatTime(duration)}
+							</span>
+							{stream?.on && (
+								<span key={drops} className={`flex items-center gap-1 text-accent ${drops ? 'pop-in' : ''}`}>
+									<NutChip amount={STREAM_NUT} className="size-3.5" />
+									{streamed}/{stream.capPerEpisode}
+									<span className="sr-only"> sats streamed this episode</span>
+								</span>
+							)}
 						</p>
 					</button>
 					{giftButton()}
@@ -373,6 +461,7 @@ function Player({ episode, artwork, onGift, onPausedChange }: { episode: Episode
 							</button>
 						</div>
 						{giftButton(true)}
+						{stream && <StreamCard prefs={stream} streamed={streamed} note={streamNote} onChange={changeStream} />}
 						<button className="btn mx-auto flex text-sm text-muted" onClick={() => setExpanded(false)}>
 							<ChevronDownIcon className="size-4" /> Minimise
 						</button>
@@ -382,5 +471,59 @@ function Player({ episode, artwork, onGift, onPausedChange }: { episode: Episode
 
 			{gifting !== undefined && <GiftSheet episode={episode} seconds={gifting} onClose={() => setGifting(undefined)} onChange={onGift} />}
 		</>
+	);
+}
+
+/** Streaming sats from the Now playing sheet: off until turned on, with the rate and cap in plain view. */
+function StreamCard({ prefs, streamed, note, onChange }: { prefs: StreamPrefs; streamed: number; note: string; onChange: (patch: Partial<StreamPrefs>) => void }) {
+	const capped = streamed + STREAM_NUT > prefs.capPerEpisode;
+	return (
+		<div className="space-y-3 rounded-3xl bg-background p-4">
+			<Toggle
+				label="Stream sats"
+				hint={`${STREAM_NUT} sats every ${prefs.everyMinutes === 1 ? 'minute' : `${prefs.everyMinutes} minutes`} you listen, up to ${prefs.capPerEpisode} per episode. Works offline; sends when you're back online.`}
+				checked={prefs.on}
+				onChange={(on) => onChange({ on })}
+			/>
+			{prefs.on && (
+				<>
+					<Choice label="Every" options={STREAM_EVERY} value={prefs.everyMinutes} unit="min" onChange={(everyMinutes) => onChange({ everyMinutes })} />
+					<Choice label="Up to" options={STREAM_CAPS} value={prefs.capPerEpisode} unit="sats" onChange={(capPerEpisode) => onChange({ capPerEpisode })} />
+					<div>
+						<div className="h-1.5 overflow-hidden rounded-full bg-line">
+							<div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${Math.min(100, (streamed / prefs.capPerEpisode) * 100)}%` }} />
+						</div>
+						<p className="num mt-1.5 text-xs text-muted">
+							{streamed} of {prefs.capPerEpisode} sats streamed this episode{capped ? ' · cap reached' : ''}
+						</p>
+					</div>
+				</>
+			)}
+			{note && <Notice tone="warn">{note}</Notice>}
+		</div>
+	);
+}
+
+function Choice({ label, options, value, unit, onChange }: { label: string; options: readonly number[]; value: number; unit: string; onChange: (value: number) => void }) {
+	return (
+		<div className="flex items-center gap-3">
+			<span className="w-11 shrink-0 text-sm text-muted">{label}</span>
+			<div role="radiogroup" aria-label={label} className="grid flex-1 grid-cols-3 gap-1 rounded-full bg-line/60 p-1">
+				{options.map((o) => (
+					<button
+						key={o}
+						role="radio"
+						aria-checked={o === value}
+						onClick={() => {
+							onChange(o);
+							haptic('tick');
+						}}
+						className={`min-h-11 rounded-full text-sm tabular-nums transition-colors ${o === value ? 'bg-card font-semibold shadow-[0_1px_3px_var(--shadow)]' : 'text-muted'}`}
+					>
+						{o} {unit}
+					</button>
+				))}
+			</div>
+		</div>
 	);
 }

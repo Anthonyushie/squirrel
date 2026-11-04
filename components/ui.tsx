@@ -137,6 +137,29 @@ export function CopyText({ value, label }: { value: string; label?: string }) {
 	);
 }
 
+export function Toggle({ label, hint, checked, onChange }: { label: string; hint: ReactNode; checked: boolean; onChange: (on: boolean) => void }) {
+	return (
+		<div className="flex items-center justify-between gap-4">
+			<div>
+				<p className="font-semibold">{label}</p>
+				<p className="text-sm text-muted">{hint}</p>
+			</div>
+			<button
+				role="switch"
+				aria-checked={checked}
+				aria-label={label}
+				onClick={() => {
+					onChange(!checked);
+					haptic('tick');
+				}}
+				className={`relative h-8 w-14 shrink-0 rounded-full transition-colors duration-200 ${checked ? 'bg-accent' : 'bg-line'}`}
+			>
+				<span className={`absolute top-1 left-1 size-6 rounded-full bg-white shadow-[0_2px_4px_rgb(0_0_0/0.3)] transition-transform duration-200 ease-[var(--ease-out)] ${checked ? 'translate-x-6' : ''}`} />
+			</button>
+		</div>
+	);
+}
+
 export function Notice({ tone = 'info', children }: { tone?: 'info' | 'warn' | 'bad' | 'ok'; children: ReactNode }) {
 	const styles = {
 		info: 'border-line bg-background text-muted',
