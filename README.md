@@ -16,7 +16,7 @@ Lightning can't help here, because a Lightning payment needs both sides online. 
 
 1. **Stash (online).** The listener downloads an episode and funds a small wallet from a Cashu mint. They fill a **jar**: their sats are swapped into fixed-size nuts (8, 32 and 64 sats), each a single Cashu proof **locked to the creator's public key** with a 30-day locktime and the listener's refund key.
 2. **Gift (offline).** Mid-episode, the listener taps **Gift**, picks a size and adds a message. One nut from the jar becomes a `cashuB` token carrying the message and the episode timestamp. It's marked spent in the jar so it can't be gifted twice.
-3. **Deliver.** In person, the listener shows a QR code. Remote, the gift is queued and goes out as a [NIP-61](https://github.com/nostr-protocol/nips/blob/master/61.md) nutzap once the listener is back online.
+3. **Deliver.** In person, the listener shows a QR code. Remote, the gift is queued and goes out as a [NIP-61](https://github.com/nostr-protocol/nips/blob/master/61.md) nutzap once the listener is back online. The creator's Squirrel collects nutzaps and runs the same checks as a scanned gift before they reach the inbox.
 4. **Verify (offline).** The creator scans the QR. With no network, their phone checks that the nut is locked to their key, that the locktime hasn't passed, and that the mint really signed it. Then it shows **Verified · 32 sats · locked to you**.
 5. **Redeem (online).** Later, the creator taps **Redeem all**: each nut is signed with the creator's key and swapped at the mint for ordinary, unlocked ecash.
 6. **Refund.** Nuts the creator never redeems come back to the listener after the locktime, through the refund key.
@@ -52,7 +52,7 @@ Nodesignal funded the Cashu DLEQ bounty, whose stated goal includes safe offline
 ## Standards used
 
 - Cashu: NUT-00 (cashuB tokens), NUT-07 (proof state, for refunds), NUT-10/11 (P2PK with locktime and refund keys), NUT-12 (offline DLEQ)
-- Nostr: NIP-19 (npub), NIP-61 (kind 10019 nutzap info, kind 9321 nutzaps), NIP-65 relays
+- Nostr: NIP-19 (npub), NIP-61 (kind 10019 nutzap info, kind 9321 nutzaps), NIP-65 relays, NIP-73 (podcast episode ids on nutzaps)
 
 ## Architecture
 
@@ -68,7 +68,7 @@ One Next.js app, installed as a PWA, with all user data on the device and no bac
 | QR | `qrcode.react`; camera scanning with `BarcodeDetector`, `jsQR` fallback |
 | Feed | Route handler `/api/feed`, cached for an hour |
 
-Key files: `lib/wallet.ts` (fund, fill jar), `lib/gift.ts` (offline gift), `lib/verify.ts` (offline checks), `lib/creator.ts` (redeem), `lib/nutzap.ts` (NIP-61), `lib/refund.ts` (reclaim). `stage0/` holds the standalone scripts that proved each risky piece before any UI existed.
+Key files: `lib/wallet.ts` (fund, fill jar), `lib/gift.ts` (offline gift), `lib/verify.ts` (offline checks), `lib/creator.ts` (redeem), `lib/nutzap.ts` (send nutzaps), `lib/receive.ts` (publish kind 10019, collect nutzaps), `lib/refund.ts` (reclaim). `stage0/` holds the standalone scripts that proved each risky piece before any UI existed.
 
 ## Run it locally
 
@@ -80,7 +80,7 @@ npm run build && npm start   # service workers only run in production builds
 
 Open http://localhost:3000. The camera needs HTTPS, so on a phone use the deployed build (or **Paste a gift** on the Creator tab).
 
-To try the whole loop on one device: open **Creator** and generate a key, set **Settings → Demo creator**, add test sats and fill a jar on **Listen**, gift from the player, then paste or scan the gift on **Creator**.
+To try the whole loop on one device: open **Creator** and generate a key, set **Settings → Demo creator**, add test sats and fill a jar on **Listen**, gift from the player, then paste or scan the gift on **Creator**. For the remote path with test sats, tap **Publish nutzap info** on Creator before choosing Demo creator; gifts sent with **Send later** then show up on Creator as verified nutzaps (`scripts/check-receive.mts` runs the same path against the test mint without publishing).
 
 The default mint is `testnut.cashudevkit.org`, a test mint whose invoices pay themselves. `testnut.cashu.space` is the usual choice but returned HTTP 503 during development.
 
@@ -99,3 +99,4 @@ The default mint is `testnut.cashudevkit.org`, a test mint whose invoices pay th
 - Key backup (NUT-13 seed) and multiple creators per listener
 - A podcast app integration: gift straight from the player in apps that already support V4V
 - Deterministic nut secrets so a lost phone can restore its jar from the mint
+# squirrel
