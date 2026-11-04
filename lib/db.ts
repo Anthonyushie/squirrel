@@ -62,6 +62,10 @@ export type InboxGift = {
 	seconds?: number;
 	checks: { lock: boolean; locktime: boolean; dleq: boolean };
 	locktime: number;
+	/** How it arrived: scanned or pasted in person, or collected from Nostr as a NIP-61 nutzap. */
+	via?: 'qr' | 'nutzap';
+	/** The kind 9321 event, for nutzaps. */
+	eventId?: string;
 	redeemed: boolean;
 	redeemError?: string;
 	/** The creator's own unlocked proofs after redeeming, so they can move them to any wallet. */
@@ -99,6 +103,10 @@ export type SettingsMap = {
 	listenerKeys: { priv: string; pub: string };
 	nostrKeys: { priv: string; pub: string };
 	creatorKeys: { priv: string; pub: string };
+	/** The creator's Nostr identity, which listeners address nutzaps to. Separate from the listener's nostrKeys. */
+	creatorNostrKeys: { priv: string; pub: string };
+	/** What this phone last published as the creator's kind 10019. */
+	creatorNutzapInfo: { eventId: string; lockKey: string; mints: string[]; relays: string[]; publishedAt: number };
 	feed: Show & { fetchedAt: number };
 	/** Invoices created but not yet minted, so a paid one is never lost if the app closes. */
 	pendingQuotes: { mintUrl: string; quote: string; amount: number; createdAt: number }[];

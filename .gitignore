@@ -44,3 +44,7 @@ next-env.d.ts
 node_modules/
 stage0/out/
 !.env.example
+
+# impeccable working files (review captures, hook cache)
+/.impeccable/review/
+/.impeccable/hook.cache.json

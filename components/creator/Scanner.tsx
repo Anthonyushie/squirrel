@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
 import { Overlay } from '@/components/ui';
+import { haptic, reducedMotion } from '@/lib/feel';
 
 type Detector = { detect: (source: CanvasImageSource) => Promise<{ rawValue: string }[]> };
 declare global {
@@ -19,6 +20,8 @@ export function Scanner({ onResult, onClose }: { onResult: (text: string) => voi
 	const video = useRef<HTMLVideoElement>(null);
 	// Camera access needs a secure context (HTTPS or localhost); without it mediaDevices is missing.
 	const [error, setError] = useState(() => (navigator.mediaDevices ? '' : 'Camera needs HTTPS. Open the deployed app, or paste the gift instead.'));
+	// The viewfinder snaps shut on the code for a beat before the result screen takes over.
+	const [found, setFound] = useState(false);
 
 	useEffect(() => {
 		let stream: MediaStream | undefined;
@@ -45,8 +48,10 @@ export function Scanner({ onResult, onClose }: { onResult: (text: string) => voi
 				}
 				if (text && !stopped) {
 					stopped = true;
-					navigator.vibrate?.(60);
-					onResult(text);
+					haptic('tap');
+					setFound(true);
+					const found = text;
+					setTimeout(() => onResult(found), reducedMotion() ? 0 : 240);
 					return;
 				}
 			}
@@ -75,7 +80,14 @@ export function Scanner({ onResult, onClose }: { onResult: (text: string) => voi
 			<div className="fixed inset-0 z-50 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label="Scan gift">
 				<video ref={video} className="absolute inset-0 size-full object-cover" playsInline muted />
 				<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-					<div className="aspect-square w-[78vw] max-w-sm rounded-3xl border-4 border-white/80 shadow-[0_0_0_100vmax_rgba(0,0,0,0.45)]" />
+					<div
+						className={`relative aspect-square w-[78vw] max-w-sm transition-transform duration-200 ${found ? 'scale-90' : '[animation:breathe_2.4s_ease-in-out_infinite]'}`}
+					>
+						<div className="absolute inset-0 rounded-3xl shadow-[0_0_0_100vmax_rgba(0,0,0,0.5)]" />
+						{['top-0 left-0 border-t-[5px] border-l-[5px] rounded-tl-3xl', 'top-0 right-0 border-t-[5px] border-r-[5px] rounded-tr-3xl', 'bottom-0 left-0 border-b-[5px] border-l-[5px] rounded-bl-3xl', 'bottom-0 right-0 border-r-[5px] border-b-[5px] rounded-br-3xl'].map((c) => (
+							<span key={c} className={`absolute size-14 transition-colors ${found ? 'border-[#4ade80]' : 'border-white'} ${c}`} />
+						))}
+					</div>
 				</div>
 				<div className="relative mt-auto space-y-3 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center">
 					{error ? <p className="rounded-xl bg-black/70 p-3 text-sm">{error}</p> : <p className="text-sm text-white/80">Point at the gift QR on the listener&apos;s phone</p>}

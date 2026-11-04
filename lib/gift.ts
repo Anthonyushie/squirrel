@@ -15,6 +15,9 @@ export function encodeMemo(episodeGuid: string, seconds: number, message: string
 	return `sq1|${episodeRef(episodeGuid)}|${Math.floor(seconds)}|${message.slice(0, MESSAGE_MAX)}`;
 }
 
+/** Nutzap tag carrying the same memo, since a kind 9321 holds bare proofs with no token memo. */
+export const MEMO_TAG = 'squirrel';
+
 export function decodeMemo(memo?: string): { episodeRef?: string; seconds?: number; message: string } {
 	if (!memo?.startsWith('sq1|')) return { message: memo ?? '' };
 	const [, ref, secs, ...rest] = memo.split('|');

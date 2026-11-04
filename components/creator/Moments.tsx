@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { PlayIcon } from '@/components/feel/icons';
 import { Sheet } from '@/components/ui';
 import type { InboxGift } from '@/lib/db';
 import { getSavedEpisode } from '@/lib/episodes';
@@ -24,7 +25,7 @@ export function Moments({ inbox, episodes, online }: { inbox: InboxGift[]; episo
 	return (
 		<section className="space-y-3">
 			<div>
-				<h2 className="text-lg font-bold">Moments</h2>
+				<h2 className="text-xl">Moments</h2>
 				<p className="text-sm text-muted">Where in each episode listeners reached for a gift. Tap a bar to hear that moment.</p>
 			</div>
 			{moments.map((m) => (
@@ -124,7 +125,11 @@ function MomentsCard({ m, online }: { m: EpisodeMoments; online: boolean }) {
 									aria-label={`${formatTime(b.start)} to ${formatTime(b.end)}: ${b.gifts.length} ${b.gifts.length === 1 ? 'gift' : 'gifts'}, ${b.sats} sats`}
 									onClick={() => choose(i)}
 								>
-									<span className={`w-full rounded-t-sm transition-colors ${i === current ? 'bg-foreground' : 'bg-accent'}`} style={{ height: `${Math.max(10, (b.sats / max) * 100)}%` }} />
+									{/* Bars grow up from the baseline the first time the map appears. */}
+									<span
+										className={`w-full origin-bottom rounded-t-sm transition-colors ${i === current ? 'bg-foreground' : 'bg-accent'}`}
+										style={{ height: `${Math.max(10, (b.sats / max) * 100)}%`, animation: `grow-up 640ms var(--ease-out) ${i * 16}ms both` }}
+									/>
 								</button>
 							) : (
 								<span key={i} aria-hidden className="flex h-full flex-1 items-end">
@@ -153,7 +158,9 @@ function MomentsCard({ m, online }: { m: EpisodeMoments; online: boolean }) {
 					{bucket.gifts.map((g) => (
 						<li key={g.id}>
 							<button className="flex min-h-11 w-full items-center gap-3 text-left" onClick={() => play(g.seconds)} disabled={!src} aria-label={`Play from ${formatTime(g.seconds)}`}>
-								<span className="shrink-0 font-semibold text-accent tabular-nums">▶ {formatTime(g.seconds)}</span>
+								<span className="flex shrink-0 items-center gap-1 font-semibold text-accent tabular-nums">
+									<PlayIcon className="size-3.5" /> {formatTime(g.seconds)}
+								</span>
 								<span className="min-w-0 flex-1 text-sm">{g.message ? <>&ldquo;{g.message}&rdquo;</> : <span className="text-muted">No message</span>}</span>
 								<span className="shrink-0 text-sm text-muted tabular-nums">{g.amount}</span>
 							</button>

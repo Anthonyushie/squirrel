@@ -1,7 +1,8 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { haptic } from '@/lib/feel';
 import { useOnline } from '@/lib/hooks';
 
 const TABS = [
@@ -12,28 +13,93 @@ const TABS = [
 
 export function Header() {
 	const online = useOnline();
+	// Bumped when the connection changes while the page is open: the pill flips over, and going
+	// offline briefly says the part that matters.
+	const [flips, setFlips] = useState(0);
+	const [reassure, setReassure] = useState(false);
+
+	useEffect(() => {
+		let timer: ReturnType<typeof setTimeout>;
+		const onChange = () => {
+			setFlips((n) => n + 1);
+			haptic('tick');
+			clearTimeout(timer);
+			setReassure(!navigator.onLine);
+			if (!navigator.onLine) timer = setTimeout(() => setReassure(false), 3500);
+		};
+		window.addEventListener('online', onChange);
+		window.addEventListener('offline', onChange);
+		return () => {
+			clearTimeout(timer);
+			window.removeEventListener('online', onChange);
+			window.removeEventListener('offline', onChange);
+		};
+	}, []);
+
 	return (
-		<header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-background/90 px-4 py-3 backdrop-blur">
-			<span className="flex items-center gap-2 text-lg font-bold">
-				<img src="/icon.svg" alt="" className="size-7" />
-				Squirrel
-			</span>
-			<span
-				className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${online ? 'bg-ok/15 text-ok' : 'bg-muted/20 text-muted'}`}
-			>
-				<span className={`size-2 rounded-full ${online ? 'bg-ok' : 'bg-muted'}`} />
-				{online ? 'Online' : 'Offline'}
-			</span>
+		<header className="sticky top-0 z-20 border-b border-line bg-background px-4 py-3 [view-transition-name:header] lg:px-8">
+			<div className="mx-auto flex max-w-6xl items-center justify-between">
+				<div className="flex items-center gap-10">
+					<span className="flex items-center gap-2 font-display text-xl font-semibold">
+						<img src="/icon.svg" alt="" className="size-8" />
+						Squirrel
+					</span>
+					<TopNav />
+				</div>
+				<span
+					key={flips}
+					role="status"
+					className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${flips ? 'flip-in' : ''} ${online ? 'bg-ok/15 text-ok' : 'bg-muted/20 text-muted'}`}
+				>
+					<span className={`size-2 rounded-full ${online ? 'bg-ok' : 'bg-muted'}`} />
+					{online ? 'Online' : reassure ? 'Offline · gifting still works' : 'Offline'}
+				</span>
+			</div>
 		</header>
 	);
 }
 
+function TabIcon({ d, className }: { d: string; className: string }) {
+	return (
+		<svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+			<path d={d} />
+		</svg>
+	);
+}
+
+/** Desktop: the tabs move up into the header, and the pill glides along it. */
+function TopNav() {
+	const path = usePathname();
+	return (
+		<nav aria-label="Main" className="hidden lg:block">
+			<ul className="flex gap-1">
+				{TABS.map((t) => {
+					const active = path.startsWith(t.href);
+					return (
+						<li key={t.href}>
+							<a
+								href={t.href}
+								aria-current={active ? 'page' : undefined}
+								className={`relative flex h-10 items-center gap-2 rounded-full px-4 font-display font-semibold transition-colors duration-200 ${active ? 'text-accent' : 'text-muted hover:bg-foreground/5 hover:text-foreground'}`}
+							>
+								{active && <span aria-hidden className="absolute inset-0 rounded-full bg-accent/15 [view-transition-name:tab-pill]" />}
+								<TabIcon d={t.icon} className="relative size-5" />
+								<span className="relative">{t.label}</span>
+							</a>
+						</li>
+					);
+				})}
+			</ul>
+		</nav>
+	);
+}
+
 // Plain <a> links on purpose: full navigations are served by the service worker when offline,
-// where client-side RSC fetches would fail.
+// where client-side RSC fetches would fail. They animate as cross-document view transitions.
 export function TabBar() {
 	const path = usePathname();
 	return (
-		<nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+		<nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-background pb-[env(safe-area-inset-bottom)] [view-transition-name:tabbar] lg:hidden">
 			<ul className="mx-auto flex max-w-lg">
 				{TABS.map((t) => {
 					const active = path.startsWith(t.href);
@@ -42,11 +108,12 @@ export function TabBar() {
 							<a
 								href={t.href}
 								aria-current={active ? 'page' : undefined}
-								className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium ${active ? 'text-accent' : 'text-muted'}`}
+								onClick={() => haptic('tick')}
+								className={`flex min-h-16 flex-col items-center justify-center gap-0.5 text-xs font-medium ${active ? 'text-accent' : 'text-muted'}`}
 							>
-								<svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-									<path d={t.icon} />
-								</svg>
+								<span className={`flex h-8 w-14 items-center justify-center rounded-full ${active ? 'bg-accent/15 [view-transition-name:tab-pill] lg:[view-transition-name:none]' : ''}`}>
+									<TabIcon d={t.icon} className="size-6" />
+								</span>
 								{t.label}
 							</a>
 						</li>

@@ -18,7 +18,7 @@ export function newNostrKeypair(): Keypair {
 	return { priv: bytesToHex(priv), pub: getPublicKey(priv) };
 }
 
-async function ensure(name: 'listenerKeys' | 'nostrKeys', make: () => Keypair): Promise<Keypair> {
+async function ensure(name: 'listenerKeys' | 'nostrKeys' | 'creatorNostrKeys', make: () => Keypair): Promise<Keypair> {
 	const existing = await getSetting(name);
 	if (existing) return existing;
 	const kp = make();
@@ -30,6 +30,9 @@ async function ensure(name: 'listenerKeys' | 'nostrKeys', make: () => Keypair): 
 export const ensureListenerKeys = () => ensure('listenerKeys', newP2PKKeypair);
 /** The listener's Nostr key, used to sign nutzap events. */
 export const ensureNostrKeys = () => ensure('nostrKeys', newNostrKeypair);
+
+/** The creator's Nostr key: publishes their kind 10019 and is the npub listeners nutzap. */
+export const ensureCreatorNostrKeys = () => ensure('creatorNostrKeys', newNostrKeypair);
 
 export const getCreatorKeys = () => getSetting('creatorKeys');
 export const setCreatorKeys = (kp: SettingsMap['creatorKeys']) => setSetting('creatorKeys', kp);

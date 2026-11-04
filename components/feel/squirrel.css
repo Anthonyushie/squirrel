@@ -1,0 +1,90 @@
+/* Squirrel rig motion. Idle loops are slow and small; poses are one-shot and short. */
+.sq g,
+.sq path,
+.sq circle,
+.sq ellipse {
+  transform-box: fill-box;
+}
+
+.sq-all {
+  transform-origin: 50% 100%;
+}
+.sq-tail {
+  transform-origin: 8% 96%;
+  animation: sq-tail 3.4s ease-in-out infinite alternate;
+}
+.sq-body {
+  transform-origin: 50% 100%;
+  animation: sq-breathe 2.8s ease-in-out infinite;
+}
+.sq-head {
+  transform-origin: 70% 90%;
+  animation: sq-look 9s ease-in-out infinite;
+}
+.sq-arms {
+  transform-origin: 90% 10%;
+  transition: transform 200ms var(--ease-out);
+}
+.sq-eye {
+  transform-origin: 50% 50%;
+  animation: sq-blink 5.2s infinite;
+}
+.sq-ear-front {
+  transform-origin: 40% 100%;
+  animation: sq-twitch 7s infinite;
+}
+.sq-ear-back {
+  transform-origin: 40% 100%;
+  transition: transform 240ms var(--ease-out);
+}
+.sq-cheek {
+  transform-origin: 50% 50%;
+  transition: transform 220ms var(--ease-out);
+}
+.sq-goggles {
+  animation: pop-in 420ms var(--ease-out) both;
+  transform-origin: 50% 50%;
+}
+
+@keyframes sq-tail {
+  from { transform: rotate(-3deg); }
+  to { transform: rotate(4deg); }
+}
+@keyframes sq-breathe {
+  50% { transform: scaleY(1.018); }
+}
+@keyframes sq-look {
+  0%, 38%, 100% { transform: rotate(0); }
+  44%, 66% { transform: rotate(-7deg); }
+}
+@keyframes sq-blink {
+  0%, 93%, 100% { transform: scaleY(1); }
+  95.5% { transform: scaleY(0.1); }
+}
+@keyframes sq-twitch {
+  0%, 60%, 66%, 100% { transform: rotate(0); }
+  62% { transform: rotate(-10deg); }
+  64% { transform: rotate(4deg); }
+}
+@keyframes sq-hop {
+  0% { transform: none; }
+  30% { transform: translateY(-16px) scaleY(1.04); }
+  62% { transform: translateY(0) scale(1.04, 0.93); }
+  100% { transform: none; }
+}
+@keyframes sq-flick {
+  0%, 100% { transform: rotate(0); }
+  35% { transform: rotate(-14deg); }
+  70% { transform: rotate(8deg); }
+}
+
+.sq[data-pose="hop"] .sq-all { animation: sq-hop 520ms var(--ease-out); }
+.sq[data-pose="puff"] .sq-cheek { transform: scale(1.5); }
+.sq[data-pose="puff"] .sq-all { animation: sq-hop 520ms var(--ease-out); }
+.sq[data-pose="toss"] .sq-arms { transform: rotate(38deg) translate(-2px, -6px); }
+.sq[data-pose="cheer"] .sq-all { animation: sq-hop 480ms var(--ease-out) 2; }
+.sq[data-pose="cheer"] .sq-tail { animation: sq-flick 600ms var(--ease-out); }
+.sq[data-pose="cheer"] .sq-arms { transform: rotate(46deg) translate(-2px, -8px); }
+.sq[data-pose="worry"] .sq-ear-front,
+.sq[data-pose="worry"] .sq-ear-back { animation: none; transform: rotate(24deg); }
+.sq[data-pose="worry"] .sq-head { animation: none; transform: rotate(7deg); }

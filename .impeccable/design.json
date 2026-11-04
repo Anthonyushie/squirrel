@@ -1,0 +1,605 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-03T17:58:34+00:00",
+  "title": "Design System: Squirrel",
+  "extensions": {
+    "colorMeta": {
+      "espresso-ink": {
+        "role": "neutral",
+        "displayName": "Espresso Ink",
+        "canonical": "oklch(24% 0.03 60)",
+        "tonalRamp": [
+          "oklch(15% 0.017 60)",
+          "oklch(27% 0.024 60)",
+          "oklch(39% 0.030 60)",
+          "oklch(51% 0.030 60)",
+          "oklch(63% 0.030 60)",
+          "oklch(75% 0.030 60)",
+          "oklch(85% 0.024 60)",
+          "oklch(95% 0.017 60)"
+        ],
+        "darkScheme": "cream-foreground-dark"
+      },
+      "oat-paper": {
+        "role": "neutral",
+        "displayName": "Oat Paper",
+        "canonical": "oklch(97.5% 0.01 75)",
+        "tonalRamp": [
+          "oklch(15% 0.007 75)",
+          "oklch(27% 0.010 75)",
+          "oklch(39% 0.012 75)",
+          "oklch(51% 0.012 75)",
+          "oklch(63% 0.012 75)",
+          "oklch(75% 0.012 75)",
+          "oklch(85% 0.010 75)",
+          "oklch(95% 0.007 75)"
+        ],
+        "darkScheme": "roast-background-dark"
+      },
+      "card-white": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0.003 75)",
+          "oklch(27% 0.005 75)",
+          "oklch(39% 0.006 75)",
+          "oklch(51% 0.006 75)",
+          "oklch(63% 0.006 75)",
+          "oklch(75% 0.006 75)",
+          "oklch(85% 0.005 75)",
+          "oklch(95% 0.003 75)"
+        ],
+        "darkScheme": "card-dark"
+      },
+      "bark-muted": {
+        "role": "neutral",
+        "displayName": "Bark Muted",
+        "canonical": "oklch(53% 0.025 65)",
+        "tonalRamp": [
+          "oklch(15% 0.014 65)",
+          "oklch(27% 0.020 65)",
+          "oklch(39% 0.025 65)",
+          "oklch(51% 0.025 65)",
+          "oklch(63% 0.025 65)",
+          "oklch(75% 0.025 65)",
+          "oklch(85% 0.020 65)",
+          "oklch(95% 0.014 65)"
+        ],
+        "darkScheme": "muted-dark"
+      },
+      "linen-line": {
+        "role": "neutral",
+        "displayName": "Linen Line",
+        "canonical": "oklch(89% 0.022 75)",
+        "tonalRamp": [
+          "oklch(15% 0.012 75)",
+          "oklch(27% 0.018 75)",
+          "oklch(39% 0.022 75)",
+          "oklch(51% 0.022 75)",
+          "oklch(63% 0.022 75)",
+          "oklch(75% 0.022 75)",
+          "oklch(85% 0.018 75)",
+          "oklch(95% 0.012 75)"
+        ],
+        "darkScheme": "line-dark"
+      },
+      "rust-accent": {
+        "role": "primary",
+        "displayName": "Rust Accent",
+        "canonical": "oklch(55.5% 0.15 50)",
+        "tonalRamp": [
+          "oklch(15% 0.083 50)",
+          "oklch(27% 0.120 50)",
+          "oklch(39% 0.150 50)",
+          "oklch(51% 0.150 50)",
+          "oklch(63% 0.150 50)",
+          "oklch(75% 0.150 50)",
+          "oklch(85% 0.120 50)",
+          "oklch(95% 0.083 50)"
+        ],
+        "darkScheme": "amber-accent-dark"
+      },
+      "accent-foreground": {
+        "role": "primary",
+        "displayName": "On Accent",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0.006 50)",
+          "oklch(27% 0.008 50)",
+          "oklch(39% 0.010 50)",
+          "oklch(51% 0.010 50)",
+          "oklch(63% 0.010 50)",
+          "oklch(75% 0.010 50)",
+          "oklch(85% 0.008 50)",
+          "oklch(95% 0.006 50)"
+        ],
+        "darkScheme": "accent-foreground-dark"
+      },
+      "leaf-ok": {
+        "role": "tertiary",
+        "displayName": "Leaf OK",
+        "canonical": "oklch(52.7% 0.137 150)",
+        "tonalRamp": [
+          "oklch(15% 0.075 150)",
+          "oklch(27% 0.110 150)",
+          "oklch(39% 0.137 150)",
+          "oklch(51% 0.137 150)",
+          "oklch(63% 0.137 150)",
+          "oklch(75% 0.137 150)",
+          "oklch(85% 0.110 150)",
+          "oklch(95% 0.075 150)"
+        ],
+        "darkScheme": "ok-dark"
+      },
+      "brick-bad": {
+        "role": "tertiary",
+        "displayName": "Brick Bad",
+        "canonical": "oklch(50.5% 0.19 27)",
+        "tonalRamp": [
+          "oklch(15% 0.105 27)",
+          "oklch(27% 0.152 27)",
+          "oklch(39% 0.190 27)",
+          "oklch(51% 0.190 27)",
+          "oklch(63% 0.190 27)",
+          "oklch(75% 0.190 27)",
+          "oklch(85% 0.152 27)",
+          "oklch(95% 0.105 27)"
+        ],
+        "darkScheme": "bad-dark"
+      },
+      "nut-amber": {
+        "role": "secondary",
+        "displayName": "Acorn Amber",
+        "canonical": "oklch(76.9% 0.165 70)",
+        "tonalRamp": [
+          "oklch(15% 0.091 70)",
+          "oklch(27% 0.132 70)",
+          "oklch(39% 0.165 70)",
+          "oklch(51% 0.165 70)",
+          "oklch(63% 0.165 70)",
+          "oklch(75% 0.165 70)",
+          "oklch(85% 0.132 70)",
+          "oklch(95% 0.091 70)"
+        ]
+      },
+      "nut-rust": {
+        "role": "secondary",
+        "displayName": "Hazel Rust",
+        "canonical": "oklch(55.5% 0.15 50)",
+        "tonalRamp": [
+          "oklch(15% 0.083 50)",
+          "oklch(27% 0.120 50)",
+          "oklch(39% 0.150 50)",
+          "oklch(51% 0.150 50)",
+          "oklch(63% 0.150 50)",
+          "oklch(75% 0.150 50)",
+          "oklch(85% 0.120 50)",
+          "oklch(95% 0.083 50)"
+        ]
+      },
+      "nut-shell": {
+        "role": "secondary",
+        "displayName": "Walnut Shell",
+        "canonical": "oklch(50% 0.08 60)",
+        "tonalRamp": [
+          "oklch(15% 0.044 60)",
+          "oklch(27% 0.064 60)",
+          "oklch(39% 0.080 60)",
+          "oklch(51% 0.080 60)",
+          "oklch(63% 0.080 60)",
+          "oklch(75% 0.080 60)",
+          "oklch(85% 0.064 60)",
+          "oklch(95% 0.044 60)"
+        ]
+      },
+      "nut-line": {
+        "role": "secondary",
+        "displayName": "Seam Brown",
+        "canonical": "oklch(41% 0.07 58)",
+        "tonalRamp": [
+          "oklch(15% 0.039 58)",
+          "oklch(27% 0.056 58)",
+          "oklch(39% 0.070 58)",
+          "oklch(51% 0.070 58)",
+          "oklch(63% 0.070 58)",
+          "oklch(75% 0.070 58)",
+          "oklch(85% 0.056 58)",
+          "oklch(95% 0.039 58)"
+        ]
+      },
+      "nut-light": {
+        "role": "secondary",
+        "displayName": "Kernel Light",
+        "canonical": "oklch(92.4% 0.115 95)",
+        "tonalRamp": [
+          "oklch(15% 0.063 95)",
+          "oklch(27% 0.092 95)",
+          "oklch(39% 0.115 95)",
+          "oklch(51% 0.115 95)",
+          "oklch(63% 0.115 95)",
+          "oklch(75% 0.115 95)",
+          "oklch(85% 0.092 95)",
+          "oklch(95% 0.063 95)"
+        ]
+      },
+      "kraft": {
+        "role": "secondary",
+        "displayName": "Kraft Tag",
+        "canonical": "color-mix(in oklab, #e8dccd 78%, #8a5a2b)",
+        "tonalRamp": [
+          "oklch(15% 0.022 70)",
+          "oklch(27% 0.032 70)",
+          "oklch(39% 0.040 70)",
+          "oklch(51% 0.040 70)",
+          "oklch(63% 0.040 70)",
+          "oklch(75% 0.040 70)",
+          "oklch(85% 0.032 70)",
+          "oklch(95% 0.022 70)"
+        ]
+      },
+      "shelf": {
+        "role": "secondary",
+        "displayName": "Plank",
+        "canonical": "oklch(50% 0.08 60)",
+        "tonalRamp": [
+          "oklch(15% 0.044 60)",
+          "oklch(27% 0.064 60)",
+          "oklch(39% 0.080 60)",
+          "oklch(51% 0.080 60)",
+          "oklch(63% 0.080 60)",
+          "oklch(75% 0.080 60)",
+          "oklch(85% 0.064 60)",
+          "oklch(95% 0.044 60)"
+        ],
+        "darkScheme": "shelf-dark"
+      },
+      "shelf-edge": {
+        "role": "secondary",
+        "displayName": "Plank Edge",
+        "canonical": "oklch(41% 0.07 58)",
+        "tonalRamp": [
+          "oklch(15% 0.039 58)",
+          "oklch(27% 0.056 58)",
+          "oklch(39% 0.070 58)",
+          "oklch(51% 0.070 58)",
+          "oklch(63% 0.070 58)",
+          "oklch(75% 0.070 58)",
+          "oklch(85% 0.056 58)",
+          "oklch(95% 0.039 58)"
+        ]
+      },
+      "roast-background-dark": {
+        "role": "neutral",
+        "displayName": "Roast Background",
+        "scheme": "dark"
+      },
+      "cream-foreground-dark": {
+        "role": "neutral",
+        "displayName": "Cream Foreground",
+        "scheme": "dark"
+      },
+      "card-dark": {
+        "role": "neutral",
+        "displayName": "Card (dark)",
+        "scheme": "dark"
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Muted (dark)",
+        "scheme": "dark"
+      },
+      "line-dark": {
+        "role": "neutral",
+        "displayName": "Line (dark)",
+        "scheme": "dark"
+      },
+      "amber-accent-dark": {
+        "role": "primary",
+        "displayName": "Amber Accent",
+        "scheme": "dark"
+      },
+      "accent-foreground-dark": {
+        "role": "primary",
+        "displayName": "On Accent (dark)",
+        "scheme": "dark"
+      },
+      "ok-dark": {
+        "role": "tertiary",
+        "displayName": "OK (dark)",
+        "scheme": "dark"
+      },
+      "bad-dark": {
+        "role": "tertiary",
+        "displayName": "Bad (dark)",
+        "scheme": "dark"
+      },
+      "shelf-dark": {
+        "role": "secondary",
+        "displayName": "Plank (dark)",
+        "scheme": "dark"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Wallet balance, gift amount, verdict lines, minted +N. Rolling digits in fixed cells."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "One h1 per tab."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section heads and sheet titles."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Every button label; 1.125rem for the main primary."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default reading size on every screen and in notices."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Muted field labels above inputs."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Tab labels, status pills, player times, connection notes."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "npubs, keys, mint URLs, cashu tokens."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-color",
+        "value": "rgb(43 29 18 / 0.2); dark rgb(0 0 0 / 0.55)",
+        "purpose": "The only shadow colour (--shadow)."
+      },
+      {
+        "name": "card-rest",
+        "value": "0 12px 28px -22px var(--shadow)",
+        "purpose": "Cards."
+      },
+      {
+        "name": "mini-player",
+        "value": "0 14px 32px -14px var(--shadow)",
+        "purpose": "Docked player."
+      },
+      {
+        "name": "sheet",
+        "value": "0 -12px 40px -20px var(--shadow)",
+        "purpose": "Bottom sheets, cast upward."
+      },
+      {
+        "name": "shelf-object",
+        "value": "0 8px 14px -8px var(--shadow)",
+        "purpose": "Shelf plank; kraft labels use 0 8px 14px -10px."
+      },
+      {
+        "name": "key-primary",
+        "value": "inset 0 -4px 0 var(--accent-edge), 0 10px 18px -12px var(--accent-edge)",
+        "purpose": "Primary button at rest."
+      },
+      {
+        "name": "key-primary-pressed",
+        "value": "inset 0 -1px 0 var(--accent-edge), 0 4px 8px -6px var(--accent-edge)",
+        "purpose": "Primary button pressed (translateY 3px)."
+      },
+      {
+        "name": "key-ghost",
+        "value": "inset 0 -3px 0 var(--ghost-edge)",
+        "purpose": "Ghost button at rest; pressed inset 0 -1px 0."
+      },
+      {
+        "name": "focus-ring-field",
+        "value": "0 0 0 3px color-mix(in oklab, var(--accent) 25%, transparent)",
+        "purpose": "Field focus."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Arrivals, presses, spring-backs, rolling digits."
+      },
+      {
+        "name": "ease-in",
+        "value": "cubic-bezier(0.7, 0, 0.84, 0)",
+        "purpose": "Departures: sheet dismiss, page out, nut leaving the jar."
+      },
+      {
+        "name": "dur-short",
+        "value": "120ms",
+        "purpose": "Press sink, checkbox."
+      },
+      {
+        "name": "dur-base",
+        "value": "220ms",
+        "purpose": "Colour and opacity changes, field focus."
+      },
+      {
+        "name": "view-transition",
+        "value": "old 120ms ease-in fade; new 320ms ease-out rise 10px; tab-pill 340ms",
+        "purpose": "Cross-document tab changes."
+      },
+      {
+        "name": "sheet",
+        "value": "up 420ms ease-out; dismiss 200ms ease-in; spring back 260ms ease-out; dismiss past 110px or 0.6px/ms",
+        "purpose": "Bottom sheet."
+      },
+      {
+        "name": "rolling-digits",
+        "value": "760ms ease-out, 45ms stagger per place",
+        "purpose": "Odometer numbers."
+      },
+      {
+        "name": "jar-lid",
+        "value": "300ms ease-out, translate(-8px, -24px) rotate(-22deg)",
+        "purpose": "Lid tips open for a pour."
+      },
+      {
+        "name": "moment-pacing",
+        "value": "full (first plays) / short (later plays or calm preference) / still (reduced motion)",
+        "purpose": "playMoment cuts for every big moment."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "view transitions off; animations and transitions 1ms, 1 iteration",
+        "purpose": "Calm equivalent: content arrives in place."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "column",
+        "value": "32rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action on a screen; a rust key that sinks on press.",
+      "html": "<button class=\"ds-btn-primary\">Fill jar</button>",
+      "css": ".ds-btn-primary{display:inline-flex;min-height:48px;align-items:center;justify-content:center;gap:8px;border:0;border-radius:16px;padding:0 16px 3px;font-family:var(--font-fredoka),Fredoka,ui-rounded,sans-serif;font-weight:600;font-size:1.0625rem;cursor:pointer;user-select:none;background:var(--accent,#b45309);color:var(--accent-foreground,#fff);box-shadow:inset 0 -4px 0 color-mix(in oklab,var(--accent,#b45309),black 32%),0 10px 18px -12px color-mix(in oklab,var(--accent,#b45309),black 32%);transition:transform 120ms cubic-bezier(0.16,1,0.3,1),box-shadow 120ms cubic-bezier(0.16,1,0.3,1),background-color 220ms}.ds-btn-primary:active:not(:disabled){transform:translateY(3px);box-shadow:inset 0 -1px 0 color-mix(in oklab,var(--accent,#b45309),black 32%),0 4px 8px -6px color-mix(in oklab,var(--accent,#b45309),black 32%)}.ds-btn-primary:focus-visible{outline:2px solid var(--accent,#b45309);outline-offset:3px}.ds-btn-primary:disabled{background:var(--line,#e8dccd);color:color-mix(in oklab,var(--foreground,#2b1d12) 70%,var(--line,#e8dccd));box-shadow:none;transform:none;cursor:not-allowed}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary actions: Add sats, Copy, Paste a gift, Reclaim.",
+      "html": "<button class=\"ds-btn-ghost\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg>Add sats</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;min-height:48px;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line,#e8dccd);border-radius:16px;padding:0 16px 2px;background:var(--card,#fff);color:var(--foreground,#2b1d12);font-family:var(--font-fredoka),Fredoka,ui-rounded,sans-serif;font-weight:600;font-size:1.0625rem;cursor:pointer;user-select:none;box-shadow:inset 0 -3px 0 color-mix(in oklab,var(--line,#e8dccd),var(--foreground,#2b1d12) 12%);transition:transform 120ms cubic-bezier(0.16,1,0.3,1),box-shadow 120ms cubic-bezier(0.16,1,0.3,1)}.ds-btn-ghost:active:not(:disabled){transform:translateY(2px);box-shadow:inset 0 -1px 0 color-mix(in oklab,var(--line,#e8dccd),var(--foreground,#2b1d12) 12%)}.ds-btn-ghost:focus-visible{outline:2px solid var(--accent,#b45309);outline-offset:3px}.ds-btn-ghost:disabled{background:transparent;box-shadow:none;color:color-mix(in oklab,var(--foreground,#2b1d12) 62%,var(--background,#faf6f0));cursor:not-allowed}"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Labelled text input; Geist Mono for keys and URLs.",
+      "html": "<label class=\"ds-label\" for=\"ds-mint\">Mint URL</label><input id=\"ds-mint\" class=\"ds-field\" value=\"https://testnut.cashu.space\">",
+      "css": ".ds-label{display:block;margin-bottom:4px;font-size:.875rem;font-weight:500;color:var(--muted,#7a6a5c)}.ds-field{min-height:48px;width:100%;border:1px solid var(--line,#e8dccd);border-radius:16px;background:var(--background,#faf6f0);color:var(--foreground,#2b1d12);padding:0 12px;font-size:.875rem;font-family:var(--font-geist-mono),ui-monospace,monospace;transition:border-color 220ms,box-shadow 220ms}.ds-field:focus{outline:none;border-color:var(--accent,#b45309);box-shadow:0 0 0 3px color-mix(in oklab,var(--accent,#b45309) 25%,transparent)}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Grouped settings and setup blocks.",
+      "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">Set up this phone to receive</h2><p class=\"ds-card-body\">Gifts are locked to a key only this phone holds.</p></section>",
+      "css": ".ds-card{border:1px solid var(--line,#e8dccd);border-radius:24px;background:var(--card,#fff);padding:16px;box-shadow:0 12px 28px -22px var(--shadow,rgb(43 29 18/.2))}.ds-card-title{margin:0 0 4px;font-family:var(--font-fredoka),Fredoka,ui-rounded,sans-serif;font-weight:600;font-size:1.125rem;letter-spacing:-0.005em}.ds-card-body{margin:0;font-size:.875rem;color:var(--muted,#7a6a5c)}"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill",
+      "description": "Header connection state; flips over on change.",
+      "html": "<span class=\"ds-pill\" role=\"status\"><span class=\"ds-dot\"></span>Online</span>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:6px;border-radius:9999px;padding:4px 10px;font-size:.75rem;font-weight:600;color:var(--ok,#15803d);background:color-mix(in oklab,var(--ok,#15803d) 15%,transparent)}.ds-dot{width:8px;height:8px;border-radius:9999px;background:var(--ok,#15803d)}"
+    },
+    {
+      "name": "Tab Bar",
+      "kind": "nav",
+      "refersTo": "tab-item",
+      "description": "Bottom tabs; the active one has an accent pill behind its icon.",
+      "html": "<nav class=\"ds-tabs\"><a class=\"ds-tab ds-tab-active\" href=\"#\" aria-current=\"page\"><span class=\"ds-tab-pill\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z\"/></svg></span>Listen</a><a class=\"ds-tab\" href=\"#\"><span class=\"ds-tab-pill\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10\"/></svg></span>Creator</a></nav>",
+      "css": ".ds-tabs{display:flex;border-top:1px solid var(--line,#e8dccd);background:var(--background,#faf6f0)}.ds-tab{flex:1;display:flex;min-height:64px;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.75rem;font-weight:500;color:var(--muted,#7a6a5c);text-decoration:none}.ds-tab:hover{color:var(--foreground,#2b1d12)}.ds-tab:focus-visible{outline:2px solid var(--accent,#b45309);outline-offset:3px}.ds-tab-pill{display:flex;height:32px;width:56px;align-items:center;justify-content:center;border-radius:9999px}.ds-tab-active,.ds-tab-active:hover{color:var(--accent,#b45309)}.ds-tab-active .ds-tab-pill{background:color-mix(in oklab,var(--accent,#b45309) 15%,transparent)}"
+    },
+    {
+      "name": "Notice (warn)",
+      "kind": "custom",
+      "refersTo": "notice",
+      "description": "Inline message; info, warn, bad (shakes once) and ok tones.",
+      "html": "<p class=\"ds-notice\">48 sats in 2 nuts passed the locktime without being redeemed. Your refund key can take them back.</p>",
+      "css": ".ds-notice{margin:0;border:1px solid color-mix(in oklab,var(--accent,#b45309) 40%,transparent);border-radius:16px;background:color-mix(in oklab,var(--accent,#b45309) 10%,transparent);color:var(--foreground,#2b1d12);padding:8px 12px;font-size:.875rem}"
+    },
+    {
+      "name": "Kraft Jar Label",
+      "kind": "custom",
+      "refersTo": "kraft-label",
+      "description": "Tag hanging under each jar; carries the jar's real numbers in plain text.",
+      "html": "<div class=\"ds-kraft\"><span class=\"ds-hole\"></span><p class=\"ds-kraft-name\">Nodesignal</p><p class=\"ds-kraft-total\">96 <span>sats ready</span></p><p class=\"ds-kraft-line\">3 × acorn</p><p class=\"ds-kraft-line\">28 days left</p></div>",
+      "css": ".ds-kraft{position:relative;width:180px;transform:rotate(-1.5deg);border-radius:2px 2px 8px 8px;background:color-mix(in oklab,#e8dccd 78%,#8a5a2b);color:#2b1d12;padding:10px 12px 8px;box-shadow:0 8px 14px -10px var(--shadow,rgb(43 29 18/.2))}.ds-kraft p{margin:0}.ds-hole{position:absolute;top:4px;left:50%;width:6px;height:6px;transform:translateX(-50%);border-radius:9999px;background:rgb(43 29 18/.4)}.ds-kraft-name{font-family:var(--font-fredoka),Fredoka,ui-rounded,sans-serif;font-weight:600;font-size:.875rem;letter-spacing:.025em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-kraft-total{font-family:var(--font-fredoka),Fredoka,ui-rounded,sans-serif;font-weight:600;font-size:1.25rem;line-height:1.25}.ds-kraft-total span{font-family:var(--font-geist-sans),system-ui,sans-serif;font-size:.875rem;font-weight:500}.ds-kraft-line{font-size:13px;line-height:1.375}"
+    },
+    {
+      "name": "Mini-player",
+      "kind": "custom",
+      "refersTo": "mini-player",
+      "description": "Docked player above the tab bar.",
+      "html": "<div class=\"ds-player\"><button class=\"ds-play\" aria-label=\"Play\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"><path d=\"M7 4.5v15l12-7.5z\"/></svg></button><div class=\"ds-meta\"><p class=\"ds-title\">Episode 212: Ecash on a plane</p><div class=\"ds-track\"><div class=\"ds-fill\"></div></div><p class=\"ds-time\">12:04 / 58:31</p></div></div>",
+      "css": ".ds-player{display:flex;align-items:center;gap:12px;max-width:32rem;border:1px solid var(--line,#e8dccd);border-radius:24px;background:var(--card,#fff);padding:8px;box-shadow:0 14px 32px -14px var(--shadow,rgb(43 29 18/.2))}.ds-play{display:flex;width:48px;height:48px;flex-shrink:0;align-items:center;justify-content:center;border:0;border-radius:9999px;background:var(--accent,#b45309);color:var(--accent-foreground,#fff);box-shadow:inset 0 -3px 0 color-mix(in oklab,var(--accent,#b45309),black 32%);cursor:pointer;transition:transform 120ms cubic-bezier(0.16,1,0.3,1)}.ds-play:active{transform:translateY(2px)}.ds-play:focus-visible{outline:2px solid var(--accent,#b45309);outline-offset:3px}.ds-meta{min-width:0;flex:1}.ds-meta p{margin:0}.ds-title{font-size:.875rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-track{margin-top:6px;height:4px;overflow:hidden;border-radius:9999px;background:var(--line,#e8dccd)}.ds-fill{width:21%;height:100%;border-radius:9999px;background:var(--accent,#b45309)}.ds-time{margin-top:4px;font-family:var(--font-fredoka),Fredoka,ui-rounded,sans-serif;font-variant-numeric:tabular-nums;font-size:.75rem;color:var(--muted,#7a6a5c)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Pantry Shelf",
+    "overview": "Your stash is a jar of real nuts. Every jar on screen holds exactly the nuts you own, sized by value (hazelnut 8 sats, acorn 32, walnut 64), and every gift is one of them leaving through the lid. The world is a warm kitchen pantry: oat paper and espresso ink, clear glass jars with a curved highlight, a wooden plank they stand on, kraft labels hanging below, and one hand-drawn squirrel peeking over the first lid. It is gamified in look and motion only; nothing on screen is a level, a streak or a badge, and every quantity shown is a real balance.\n\nThe app is an operate-mode phone shell: a sticky header with the acorn and an online/offline pill, a single 32rem column, a docked mini-player, bottom tabs, and bottom sheets for every task. Density is relaxed and one-handed: 48px controls, a 64px tab bar, generous vertical stacks. The play layer (jars, nuts, squirrel, motion) never edits the money layer: amounts, mint, lock status and warnings are always plain, full-contrast text set beside the decoration, never on it.\n\nMotion is tactile and physical: buttons sink when pressed, digits roll in fixed cells, nuts are physics-simulated and pour, rattle and hop out. Big moments play full the first few times, then a shorter cut, and collapse to a still, in-place equivalent under reduced motion. Haptics are on by default; synthesized sound is opt-in.",
+    "keyCharacteristics": [
+      "Pinned espresso/amber palette; every new colour derives from the acorn logo's five colours plus ink.",
+      "Fredoka carries numbers, titles, buttons and labels; Geist carries reading text; Geist Mono carries keys and tokens.",
+      "Pressable controls with a darker bottom edge that sink 2-3px on press.",
+      "Glass jars holding simulated nuts sized by value, standing on a wooden shelf with kraft labels.",
+      "One squirrel per screen, behind the first jar, paws on the lid.",
+      "Odometer digits that roll per place without reflowing the line."
+    ],
+    "rules": [
+      {
+        "name": "The Logo Palette Rule",
+        "body": "The `:root` and dark tokens are owner-pinned. Any new colour is a mix of the logo's five colours (#f59e0b, #b45309, #8a5a2b, #6b4320, #fde68a) and ink (#2b1d12), or of an existing token. No other hue enters the system.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Accent Rule",
+        "body": "Rust/amber is the only action colour. Green and red mean status, never action.",
+        "section": "colors"
+      },
+      {
+        "name": "The Plain Money Rule",
+        "body": "Amounts, mint, lock status and warnings are set in foreground or status colour on an opaque surface, at full contrast. Decoration (nuts, glass, squirrel, shine) never sits on top of them.",
+        "section": "colors"
+      },
+      {
+        "name": "The Fixed Cell Rule",
+        "body": "Changing numbers roll per digit inside cells sized by an invisible copy of the digit (760ms, 45ms stagger per place), so the line never reflows. The real value stays in the DOM for screen readers.",
+        "section": "typography"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "Fredoka for anything you count, tap or title; Geist for anything you read. Never set paragraphs in Fredoka.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sinking Key Rule",
+        "body": "Buttons have a darker bottom edge and sink on press (2px ghost, 3px primary) as the edge collapses. Disabled controls go flat: no edge, no shadow, no movement.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Shelf Shadow Rule",
+        "body": "Drop shadows are soft and pulled in by a negative spread, always in `--shadow`. No hard offset shadows, no coloured glows except the accent edge under the primary key.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** derive any new colour from the logo's five colours and ink, or mix existing tokens with `color-mix(in oklab, ...)`.",
+      "**Do** keep every money fact (amount, mint, lock status, warning) as plain foreground or status text on an opaque surface, next to the decoration, never on it.",
+      "**Do** show exactly one squirrel per screen, behind the first jar with its paws on the lid.",
+      "**Do** size nuts by value (hazelnut 8, acorn 32, walnut 64) and make jars hold exactly the real nuts.",
+      "**Do** use the shared key for every control: 48px minimum, 16px corners, inset bottom edge, sink on press, flat when disabled.",
+      "**Do** roll changing numbers in fixed digit cells, and give every big moment a full, short and still cut through `playMoment`.",
+      "**Do** keep haptics on key moments by default and sound strictly opt-in.",
+      "**Do** honour reduced motion: view transitions off, animations and transitions collapse to 1ms, content arrives in place."
+    ],
+    "donts": [
+      "**Don't** introduce levels, XP, streaks, badges, quests, leaderboards or confetti; the game feel lives only in look and motion.",
+      "**Don't** change the pinned `:root` or dark tokens, or redraw the acorn logo.",
+      "**Don't** use green or red for actions; they are status only.",
+      "**Don't** use hard offset shadows or coloured glows; depth is soft, negative-spread `--shadow` plus the key's inset edge.",
+      "**Don't** set paragraphs in Fredoka or numbers that change in Geist.",
+      "**Don't** animate on scroll, or loop motion outside the squirrel's idle rig and waiting or playing states (rocking nut while loading or awaiting payment, skeleton shimmer, ring pulse on a pending invoice QR, breathing scan frame, equaliser bars while audio plays).",
+      "**Don't** nudge users to spend more than they chose; jars and hoards show real balances only."
+    ]
+  }
+}

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { nip19 } from 'nostr-tools';
 import { CopyText, Notice } from '@/components/ui';
+import { haptic, setFeelPrefs, sfx, useFeelPrefs } from '@/lib/feel';
+import { getSetting } from '@/lib/db';
 import { useOnline } from '@/lib/hooks';
 import { ensureListenerKeys, ensureNostrKeys, getCreatorKeys, normalizeLockKey } from '@/lib/keys';
 import { checkMint, type MintSupport } from '@/lib/mint';
@@ -69,12 +71,23 @@ export function Settings() {
 	}
 
 	async function presetDemo() {
-		const creator = await getCreatorKeys();
-		update({ creatorNpub: '', creatorName: 'Demo creator', creatorLockKey: creator?.pub ?? '', mintUrl: TEST_MINT, trustedMints: [], creatorRelays: [] });
+		const [creator, nostr, info] = await Promise.all([getCreatorKeys(), getSetting('creatorNostrKeys'), getSetting('creatorNutzapInfo')]);
+		// With this device's nutzap info published, gifts to the demo creator can go by QR or by nutzap.
+		const remote = creator && nostr && info?.lockKey === creator.pub;
+		update({
+			creatorNpub: remote ? nip19.npubEncode(nostr.pub) : '',
+			creatorName: 'Demo creator',
+			creatorLockKey: creator?.pub ?? '',
+			mintUrl: TEST_MINT,
+			trustedMints: remote ? info.mints : [],
+			creatorRelays: remote ? info.relays : [],
+		});
 		setNote(
-			creator
-				? { tone: 'ok', text: "Using this device's creator key. For two phones, paste the key shown on the creator phone instead." }
-				: { tone: 'info', text: 'Open Creator on the other phone, copy its lock key, and paste it below.' },
+			remote
+				? { tone: 'ok', text: "Using this device's creator, by QR or nutzap. For two phones, paste the npub from the creator phone and look it up." }
+				: creator
+					? { tone: 'ok', text: "Using this device's creator key, QR only. Publish nutzap info on Creator to send gifts remotely too." }
+					: { tone: 'info', text: 'On the creator phone, open Creator: paste its npub below and look it up, or paste its lock key for QR only.' },
 		);
 	}
 
@@ -103,13 +116,14 @@ export function Settings() {
 	const untrusted = s.trustedMints.length > 0 && !s.trustedMints.includes(s.mintUrl.trim().replace(/\/$/, ''));
 	const realSats = !isTestMint(s.mintUrl);
 
+	// Desktop: the creator form on the left, keys and feel beside it.
 	return (
-		<div className="space-y-6">
-			<h1 className="text-2xl font-bold">Settings</h1>
+		<div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8 lg:gap-y-6 lg:space-y-0">
+			<h1 className="text-3xl lg:col-span-2">Settings</h1>
 
 			<section className="card space-y-4">
 				<div>
-					<h2 className="font-bold">Who you&apos;re gifting</h2>
+					<h2 className="text-lg">Who you&apos;re gifting</h2>
 					<p className="text-sm text-muted">Jars you fill next are locked to this creator, on this mint.</p>
 				</div>
 				<div className="grid grid-cols-2 gap-2">
@@ -162,30 +176,79 @@ export function Settings() {
 				{note && <Notice tone={note.tone}>{note.text}</Notice>}
 
 				<button className="btn-primary w-full" onClick={save} disabled={!!busy}>
-					{busy === 'save' ? 'Checking mint…' : saved ? 'Saved' : 'Save'}
+					{busy === 'save' ? 'Checking mint…' : saved ? <span className="pop-in">Saved</span> : 'Save'}
 				</button>
 			</section>
 
-			<section className="card space-y-4">
-				<div>
-					<h2 className="font-bold">Your keys</h2>
-					<p className="text-sm text-muted">Made on this device. Demo key store: not backed up.</p>
-				</div>
-				{keys ? (
-					<>
-						<div>
-							<span className="label">Refund key (takes back unredeemed nuts after the locktime)</span>
-							<CopyText value={keys.refund} label="refund key" />
-						</div>
-						<div>
-							<span className="label">Nostr key (signs nutzaps you send)</span>
-							<CopyText value={keys.npub} label="Nostr npub" />
-						</div>
-					</>
-				) : (
-					<p className="text-muted">Generating…</p>
-				)}
-			</section>
+			<div className="space-y-6">
+				<section className="card space-y-4">
+					<div>
+						<h2 className="text-lg">Your keys</h2>
+						<p className="text-sm text-muted">Made on this device. Demo key store: not backed up.</p>
+					</div>
+					{keys ? (
+						<>
+							<div>
+								<span className="label">Refund key (takes back unredeemed nuts after the locktime)</span>
+								<CopyText value={keys.refund} label="refund key" />
+							</div>
+							<div>
+								<span className="label">Nostr key (signs nutzaps you send)</span>
+								<CopyText value={keys.npub} label="Nostr npub" />
+							</div>
+						</>
+					) : (
+						<p className="text-muted">Generating…</p>
+					)}
+				</section>
+
+				<FeelSettings />
+			</div>
+		</div>
+	);
+}
+
+function FeelSettings() {
+	const prefs = useFeelPrefs();
+	return (
+		<section className="card space-y-4">
+			<div>
+				<h2 className="text-lg">Feel</h2>
+				<p className="text-sm text-muted">Your phone vibrates on key moments where it can (Android). Saved on this device.</p>
+			</div>
+			<Toggle
+				label="Sounds"
+				hint="Clinks, pops and a chime. Off until you turn it on."
+				checked={prefs.sound}
+				onChange={(sound) => {
+					setFeelPrefs({ sound });
+					if (sound) sfx.chime();
+				}}
+			/>
+			<Toggle label="Calm animations" hint="Shorter moments every time. Your phone's reduce-motion setting turns travel off entirely." checked={prefs.calm} onChange={(calm) => setFeelPrefs({ calm })} />
+		</section>
+	);
+}
+
+function Toggle({ label, hint, checked, onChange }: { label: string; hint: string; checked: boolean; onChange: (on: boolean) => void }) {
+	return (
+		<div className="flex items-center justify-between gap-4">
+			<div>
+				<p className="font-semibold">{label}</p>
+				<p className="text-sm text-muted">{hint}</p>
+			</div>
+			<button
+				role="switch"
+				aria-checked={checked}
+				aria-label={label}
+				onClick={() => {
+					onChange(!checked);
+					haptic('tick');
+				}}
+				className={`relative h-8 w-14 shrink-0 rounded-full transition-colors duration-200 ${checked ? 'bg-accent' : 'bg-line'}`}
+			>
+				<span className={`absolute top-1 left-1 size-6 rounded-full bg-white shadow-[0_2px_4px_rgb(0_0_0/0.3)] transition-transform duration-200 ease-[var(--ease-out)] ${checked ? 'translate-x-6' : ''}`} />
+			</button>
 		</div>
 	);
 }
