@@ -32,11 +32,12 @@ export function Listen() {
 	useEffect(() => {
 		let live = true;
 		(async () => {
-			const cached = await getSetting('feed');
-			setSaved(await savedEpisodeGuids());
-			if (live && cached) setFeed({ show: cached, loading: navigator.onLine });
-			if (!navigator.onLine) return setFeed((f) => ({ ...f, loading: false }));
+			// One try around everything: a failed IndexedDB read must end in an error, not a skeleton forever.
 			try {
+				const cached = await getSetting('feed');
+				setSaved(await savedEpisodeGuids());
+				if (live && cached) setFeed({ show: cached, loading: navigator.onLine });
+				if (!navigator.onLine) return setFeed((f) => ({ ...f, loading: false }));
 				const show = await refreshFeed();
 				if (live) setFeed({ show, loading: false });
 			} catch (e) {

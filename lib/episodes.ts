@@ -3,7 +3,8 @@ import type { Episode, Show } from './feed';
 
 /** Fetches the show through /api/feed and keeps it in IndexedDB for offline use. */
 export async function refreshFeed() {
-	const res = await fetch('/api/feed');
+	// A cold server fetches the RSS plus every chapters file, so allow time, but never hang the list.
+	const res = await fetch('/api/feed', { signal: AbortSignal.timeout(30_000) });
 	const body = await res.json();
 	if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
 	const show = { ...(body as Show), fetchedAt: Date.now() };
