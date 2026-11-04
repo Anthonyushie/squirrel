@@ -138,6 +138,14 @@ export function db() {
 			d.createObjectStore('episodes', { keyPath: 'guid' });
 			d.createObjectStore('kv', { keyPath: 'key' });
 		},
+		// The browser closed the connection (e.g. disk pressure): reopen on the next call.
+		terminated() {
+			dbPromise = undefined;
+		},
+	}).catch((err) => {
+		// A failed open (disk full, "Internal error.") must not be cached, or every later call fails too.
+		dbPromise = undefined;
+		throw err;
 	});
 	return dbPromise;
 }
